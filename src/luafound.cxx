@@ -46,7 +46,8 @@ void ixlb_spawn_process(const char *file, LuaRef cb, lua_State *L) {
 
     ixut_spawn_process(file, NULL, [] (ixc_termcb_args *args) {
         LuaRef *ref_cb_inner = (LuaRef *) (args->data);
-        (*ref_cb_inner)(args->pid, args->status, args->term_signal);
+        if (!ref_cb_inner->isNil()) {
+            (*ref_cb_inner)(args->pid, args->status, args->term_signal); }
         delete ref_cb_inner;
     }, (void *) ref_cb);
 }

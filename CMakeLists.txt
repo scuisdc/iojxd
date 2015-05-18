@@ -11,7 +11,11 @@ if (BUILDEBUG)
 endif()
 
 set(SOURCE_FILES)
-add_executable(iojxd ${SOURCE_FILES} src/iojxd.cxx src/child_termcb.hxx src/child_termcb.cxx src/luafound.cxx src/luafound.hxx src/foundation.cxx src/foundation.hxx src/util.hxx src/debug.hxx src/context.hxx src/common.hxx src/context.cxx src/lbext.hxx)
+add_executable(iojxd ${SOURCE_FILES} src/iojxd.cxx src/child_termcb.hxx src/child_termcb.cxx
+src/luafound.cxx src/luafound.hxx src/foundation.cxx src/foundation.hxx src/util.hxx src/debug.hxx src/context.hxx src/common.hxx src/context.cxx src/lbext.hxx src/util.cxx)
 
 target_link_libraries(iojxd luajit)
 target_link_libraries(iojxd ev)
+
+include_directories(SYSTEM ./src)
+add_executable(iojxd_test src/util.cxx test/test_cycqueue.cxx)

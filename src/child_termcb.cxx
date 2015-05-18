@@ -46,4 +46,7 @@ void ixcb_child_terminated_ev(EV_P_ struct ev_child *w, int revents) {
     args->pid = w->rpid;
     args->status = w->rstatus;
     (args->cb)(args);
+
+    free(args);
+    free(w);
 }
