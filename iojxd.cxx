@@ -17,49 +17,10 @@
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
 
-#include <unordered_map>
-#include <functional>
-
-// because we cannot have foundation
-//  so this is the ASSERTNOTREACHED
-#define ASSERT_FOUNDATION() assert(0);
-
-using IXChildTermCallbackT = std::function<void (pid_t, int)>;
-
-void ixlb_initstate(lua_State **state) {
-    *state = luaL_newstate();
-    luaL_openlibs(*state);
-}
-
-using namespace luabridge;
-
-void ixlb_reg_interface(lua_State *state) {
-
-    getGlobalNamespace(state);
-
-}
-
-void ixlb_dofile(lua_State *state, const char *path) {
-    if (luaL_dofile(state, path)) {
-        printf("error in script!\n");
-    }
-}
+#include "child_termcb.hxx"
+#include "luafound.hxx"
 
 lua_State *state = NULL;
-
-void ixut_spawn_process(const char *file, char * const argv[], IXChildTermCallbackT cb) {
-    pid_t pid = fork();
-
-    switch (pid) {
-        case -1:
-            break;
-        case 0:
-            break;
-        default:
-            execvp(file, argv);
-            ASSERT_FOUNDATION();
-    }
-}
 
 void ixcb_child_terminated(evutil_socket_t sigchld_, short evt, void *arg) {
     (void) sigchld_; (void) evt; (void) arg;
@@ -69,14 +30,19 @@ void ixcb_child_terminated(evutil_socket_t sigchld_, short evt, void *arg) {
         pid_t pid = waitpid(-1, &status, WNOHANG);
         if (pid <= 0)
             break;
+
+        int estatus = WIFEXITED(status) ? WEXITSTATUS(status) : 0;
+        int termsig = WIFSIGNALED(status) ? WTERMSIG(status) : 0;
+        ixc_set_termcb(pid, estatus, termsig);
+        ixc_call_n_remove_termcb(pid);
     }
 }
 
 int main() {
 
-    ixlb_initstate(&state);
+    ixlu_initstate(&state);
     ixlb_reg_interface(state);
-    ixlb_dofile(state, "init.lua");
+    ixlu_dofile(state, "init.lua");
 
     struct event_base *ixevbase = event_base_new();
     assert(ixevbase != NULL);
