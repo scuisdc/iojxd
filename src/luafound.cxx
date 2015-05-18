@@ -59,6 +59,8 @@ int ixlu_resume(lua_State *L) {
     return 0;
 }
 
+// TODO: this is the only way to 'resume' coroutines
+//      inside callbacks, currently
 void ixlb_spawn_process_co(const char *file, lua_State *L) {
     printf("%s\n", file);
     ixut_spawn_process(file, NULL, [] (ixc_termcb_args *args) {
