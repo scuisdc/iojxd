@@ -35,6 +35,13 @@ void ixc_enable_termcb(ixc_context *ctx) {
     event_add(ev_chldterm, NULL);
 }
 
+void ixc_disable_termcb(ixc_context *ctx) {
+    assert(ev_chldterm != NULL);
+    assert(ctx->evb != NULL);
+
+    event_del(ev_chldterm);
+}
+
 void ixc_add_termcb(pid_t pid, ixc_termcb_t cb, void *args) {
     ixc_termcb_args *r = (ixc_termcb_args *) malloc(sizeof(*r));
     memset((void *) r, 0, sizeof(*r));

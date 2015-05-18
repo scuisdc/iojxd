@@ -79,6 +79,7 @@ void ixlb_reg_interface(lua_State *state) {
             endClass().
             addFunction("current_context", &ixlb_get_cur_ctx).
             addFunction("enable_termcb", &ixc_enable_termcb).
+            addFunction("disable_termcb", &ixc_disable_termcb).
             addFunction("spawn_process", &ixlb_spawn_process).
             beginNamespace("co").
                 addFunction("spawn_process", &ixlb_spawn_process_co).

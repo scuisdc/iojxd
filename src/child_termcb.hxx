@@ -31,6 +31,8 @@ struct ixc_termcb_args {
 
 void ixc_enable_termcb(ixc_context *ctx);
 
+void ixc_disable_termcb(ixc_context *ctx);
+
 void ixc_add_termcb(pid_t pid, ixc_termcb_t cb, void *args);
 
 #endif //IOJXD_CHILD_TERMCB_HXX

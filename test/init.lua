@@ -12,6 +12,8 @@ function spawn_cotest(file)
 	print('spawn_cotest: ready')
 	spawn_co(file)
 	print("spawn_cotest: end")
+
+	iojx.disable_termcb(iojx.current_context())
 end
 
 coroutine.wrap(spawn_cotest)('./test_exec.py')
