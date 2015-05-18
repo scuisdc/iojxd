@@ -17,41 +17,16 @@
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
 
-#include "child_termcb.hxx"
+#include "common.hxx"
 #include "luafound.hxx"
-
-lua_State *state = NULL;
-
-void ixcb_child_terminated(evutil_socket_t sigchld_, short evt, void *arg) {
-    (void) sigchld_; (void) evt; (void) arg;
-
-    while (1) {
-        int status = -1;
-        pid_t pid = waitpid(-1, &status, WNOHANG);
-        if (pid <= 0)
-            break;
-
-        int estatus = WIFEXITED(status) ? WEXITSTATUS(status) : 0;
-        int termsig = WIFSIGNALED(status) ? WTERMSIG(status) : 0;
-        ixc_set_termcb(pid, estatus, termsig);
-        ixc_call_n_remove_termcb(pid);
-    }
-}
 
 int main() {
 
-    ixlu_initstate(&state);
-    ixlb_reg_interface(state);
-    ixlu_dofile(state, "init.lua");
+    ixc_context *ctx = ixc_create_context();
 
-    struct event_base *ixevbase = event_base_new();
-    assert(ixevbase != NULL);
+    ixlu_dofile(ctx->state, "init.lua");
 
-    struct event *ev_chldterm = event_new(ixevbase, SIGCHLD, EV_SIGNAL | EV_PERSIST,
-                                          ixcb_child_terminated, NULL);
-    event_add(ev_chldterm, NULL);
-
-    event_base_dispatch(ixevbase);
+    event_base_dispatch(ctx->evb);
 
     return 0;
 }

@@ -11,10 +11,29 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <unordered_map>
 
+#include <event2/event.h>
+
+#include "common.hxx"
+#include "debug.hxx"
+
 static std::unordered_map<pid_t, ixc_termcb_args *> child_cb_map;
+
+static struct event *ev_chldterm = NULL;
+
+void ixcb_child_terminated(evutil_socket_t sigchld_, short evt, void *arg);
+
+void ixc_enable_termcb(ixc_context *ctx) {
+    assert(ev_chldterm == NULL);
+    assert(ctx->evb != NULL);
+
+    ev_chldterm = event_new(ctx->evb, SIGCHLD, EV_SIGNAL | EV_PERSIST,
+        ixcb_child_terminated, NULL);
+    event_add(ev_chldterm, NULL);
+}
 
 void ixc_add_termcb(pid_t pid, ixc_termcb_t cb, void *args) {
     ixc_termcb_args *r = (ixc_termcb_args *) malloc(sizeof(*r));
@@ -46,4 +65,20 @@ ixc_termcb_args *ixc_call_n_remove_termcb(pid_t pid) {
     ret->cb(ret);
     ixc_remove_termcb(pid);
     return ret;
+}
+
+void ixcb_child_terminated(evutil_socket_t sigchld_, short evt, void *arg) {
+    (void) sigchld_; (void) evt; (void) arg;
+
+    while (1) {
+        int status = -1;
+        pid_t pid = waitpid(-1, &status, WNOHANG);
+        if (pid <= 0)
+            break;
+
+        int estatus = WIFEXITED(status) ? WEXITSTATUS(status) : 0;
+        int termsig = WIFSIGNALED(status) ? WTERMSIG(status) : 0;
+        ixc_set_termcb(pid, estatus, termsig);
+        ixc_call_n_remove_termcb(pid);
+    }
 }
