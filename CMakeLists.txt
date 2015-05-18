@@ -14,4 +14,4 @@ set(SOURCE_FILES)
 add_executable(iojxd ${SOURCE_FILES} src/iojxd.cxx src/child_termcb.hxx src/child_termcb.cxx src/luafound.cxx src/luafound.hxx src/foundation.cxx src/foundation.hxx src/util.hxx src/debug.hxx src/context.hxx src/common.hxx src/context.cxx src/lbext.hxx)
 
 target_link_libraries(iojxd luajit)
-target_link_libraries(iojxd event)
+target_link_libraries(iojxd ev)

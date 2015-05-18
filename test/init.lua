@@ -13,8 +13,9 @@ function spawn_cotest(file)
 	spawn_co(file)
 	print("spawn_cotest: end")
 
-	iojx.disable_termcb(iojx.current_context())
+	-- iojx.disable_termcb(iojx.current_context())
 end
 
 coroutine.wrap(spawn_cotest)('./test_exec.py')
 
+iojx.spawn_process('./test_exec.py', function () print('test!') end)

@@ -11,7 +11,7 @@
 
 #include <stdlib.h>
 
-#include <event2/event.h>
+#include <ev++.h>
 
 #include "debug.hxx"
 #include "luafound.hxx"
@@ -22,8 +22,10 @@ ixc_context *ixc_create_context() {
     ixc_context *r = (ixc_context *) malloc(sizeof(*r));
     ixlu_initstate(&r->state);
     ixlb_reg_interface(r->state);
-    r->evb = event_base_new();
-    assert(r->evb != NULL);
+
+    // r->evb = event_base_new();
+    // assert(r->evb != NULL);
+    r->evl = ev_default_loop(0);
 
     lua_pushstring(r->state, "_context");
     lua_pushlightuserdata(r->state, (void *) r);

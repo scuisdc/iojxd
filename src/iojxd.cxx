@@ -13,9 +13,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include <event2/event.h>
-#include <event2/buffer.h>
-#include <event2/bufferevent.h>
+#include <ev++.h>
 
 #include "common.hxx"
 #include "luafound.hxx"
@@ -26,7 +24,7 @@ int main() {
 
     ixlu_dofile(ctx->state, "init.lua");
 
-    event_base_dispatch(ctx->evb);
+    ev_run(ctx->evl, 0);
 
     return 0;
 }

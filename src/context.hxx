@@ -12,11 +12,14 @@
 
 struct lua_State;
 
-struct event_base;
+// struct event_base;
+
+struct ev_loop;
 
 struct ixc_context {
     lua_State *state;
-    event_base *evb;
+    // event_base *evb;
+    struct ev_loop *evl;
 };
 
 ixc_context *ixc_create_context();
