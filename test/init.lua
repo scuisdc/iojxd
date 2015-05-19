@@ -19,3 +19,10 @@ end
 coroutine.wrap(spawn_cotest)('./test_exec.py')
 
 iojx.spawn_process('./test_exec.py', function () print('test!') end)
+
+local sock_server = iojx.sock.create(iojx.current_context())
+iojx.sock.tcp.bind_ip(sock_server, '127.0.0.1', 6666)
+iojx.sock.set_read_callback(sock_server, function (ctx, data, len)
+	iojx.sock.write(ctx, data, len, function () print('written') end)
+end)
+iojx.sock.tcp.listen(sock_server)

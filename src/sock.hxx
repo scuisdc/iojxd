@@ -27,6 +27,7 @@ struct ixfd_conn_ctx;
 typedef int ixfd_socktype;
 typedef void (*ixfd_data_read_callback)(ixfd_conn_ctx *ctx, const char *data, size_t len);
 typedef void (*ixfd_connect_callback)(ixfd_conn_ctx *ctx);
+typedef void (*ixfd_context_callback)(ixfd_conn_ctx *ctx, void *args);
 
 struct ixfd_sock {
     int fd;
@@ -44,6 +45,7 @@ struct ixfd_sock {
 
     ixc_context *context;
     ixfd_conn_ctx *default_ctx;
+    void *data;
 };
 
 struct ixfd_conn_ctx {
@@ -66,23 +68,24 @@ struct ixfd_conn_ctx {
 struct ixfd_sock_write_ctx {
     const char *data;
     size_t len_remain;
-    ixc_void_callback cb;
+    ixfd_context_callback cb;
     const char *data_org;
+    void *cb_args;
 };
 
 struct ixfd_sock *ixfd_commonsock_create(struct ixc_context *ctx);
 
 void ixfd_commonsock_free(struct ixfd_sock *sock);
 
-void ixfd_commonsocket_tcp_createnbind(struct ixfd_sock *sock, const char *ip, unsigned short port);
+void ixfd_commonsock_tcp_createnbind(struct ixfd_sock *sock, const char *ip, unsigned short port);
 
-void ixfd_commonsocket_tcp_createnconnect(struct ixfd_sock *sock, const char *ip, unsigned short
+void ixfd_commonsock_tcp_createnconnect(struct ixfd_sock *sock, const char *ip, unsigned short
     port);
 
-void ixfd_commonsocket_tcp_listen(struct ixfd_sock *sock);
+void ixfd_commonsock_tcp_listen(struct ixfd_sock *sock);
 
 bool ixfd_commonsock_write(struct ixfd_conn_ctx *ctx, const char *data, size_t len,
-                           ixc_void_callback cb);
+                           ixfd_context_callback cb, void *args);
 
 void ixfd_commonsock_set_bufread_len(struct ixfd_conn_ctx *conn, size_t len);
 

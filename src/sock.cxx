@@ -62,7 +62,7 @@ void ixfd_commonsock_free(struct ixfd_sock *sock) {
     free(sock);
 }
 
-void ixfd_commonsocket_tcp_createnbind(ixfd_sock *sock, const char *ip, unsigned short port) {
+void ixfd_commonsock_tcp_createnbind(ixfd_sock *sock, const char *ip, unsigned short port) {
     assert(sock != NULL);
     assert(sock->type == IXFD_SOCK_UNKNOWN);
 
@@ -87,7 +87,7 @@ void ixfd_commonsocket_tcp_createnbind(ixfd_sock *sock, const char *ip, unsigned
     sock->type = IXFD_SOCK_TCP;
 }
 
-void ixfd_commonsocket_tcp_createnconnect(struct ixfd_sock *sock, const char *ip, unsigned short
+void ixfd_commonsock_tcp_createnconnect(struct ixfd_sock *sock, const char *ip, unsigned short
         port) {
     assert(sock != NULL);
     assert(sock->type == IXFD_SOCK_UNKNOWN);
@@ -114,7 +114,7 @@ void ixfd_commonsocket_tcp_createnconnect(struct ixfd_sock *sock, const char *ip
     }
 }
 
-void ixfd_commonsocket_tcp_listen(ixfd_sock *sock) {
+void ixfd_commonsock_tcp_listen(ixfd_sock *sock) {
     assert(sock != NULL);
     assert(sock->type == IXFD_SOCK_TCP);
     assert(sock->fd != 0);
@@ -124,12 +124,12 @@ void ixfd_commonsocket_tcp_listen(ixfd_sock *sock) {
 }
 
 bool ixfd_commonsock_write(struct ixfd_conn_ctx *ctx, const char *data, size_t len,
-                           ixc_void_callback cb) {
+                           ixfd_context_callback cb, void *args) {
     size_t n = write(ctx->fd, data, len);
 
     if (n >= len) {
         if (cb != NULL) {
-            cb(); }
+            cb(ctx, args); }
         return true;
     } else {
         ixfd_sock_write_ctx *ctx_write = (struct ixfd_sock_write_ctx *) malloc(sizeof(*ctx));
@@ -275,7 +275,7 @@ void ixfd_commonsock_write_cb(struct ev_loop *loop, ev_io *w_, int revents) {
         if (n >= ctx_write->len_remain) {
             ixut_cycqueue_dequeue(ctx->buf_write);
             if (ctx_write->cb != NULL) {
-                ctx_write->cb(); }
+                ctx_write->cb(ctx, ctx_write->cb_args); }
 
             free((void *) ctx_write->data_org);
             free(ctx);

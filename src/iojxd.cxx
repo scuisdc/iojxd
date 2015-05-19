@@ -28,11 +28,11 @@ int main() {
 //        ixfd_commonsock_write(ctx, data, len, NULL);
 //    };
 
-    ixfd_sock *sock_client = ixfd_commonsock_create(ctx);
-    ixfd_commonsocket_tcp_createnconnect(sock_client, "127.0.0.1", 6666);
-    sock_client->cb_conn = [] (ixfd_conn_ctx *ctx) {
-        ixfd_commonsock_write(ctx, "xaxa", 5, NULL);
-    };
+//    ixfd_sock *sock_client = ixfd_commonsock_create(ctx);
+//    ixfd_commonsock_tcp_createnconnect(sock_client, "127.0.0.1", 6666);
+//    sock_client->cb_conn = [] (ixfd_conn_ctx *ctx) {
+//        ixfd_commonsock_write(ctx, "ooolive", 5, NULL, NULL);
+//    };
 
     ixlu_dofile(ctx->state, "init.lua");
 

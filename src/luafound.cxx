@@ -19,6 +19,8 @@
 #include "foundation.hxx"
 #include "lbext.hxx"
 
+#include "sock.hxx"
+
 // using namespace luabridge;
 using luabridge::LuaRef;
 
@@ -52,6 +54,45 @@ void ixlb_spawn_process(const char *file, LuaRef cb, lua_State *L) {
     }, (void *) ref_cb);
 }
 
+void ixlb_sock_write(struct ixfd_conn_ctx *ctx, const char *data, size_t len, LuaRef cb) {
+    LuaRef *ref_cb = new LuaRef(cb);
+
+    ixfd_commonsock_write(ctx, data, len, [] (ixfd_conn_ctx *ctx, void *args) {
+        LuaRef *ref_cb_inner = (LuaRef *) args;
+        if (!ref_cb_inner->isNil()) {
+            (*ref_cb_inner)(ctx); }
+        delete ref_cb_inner;
+    }, (void *) ref_cb);
+}
+
+struct ixlb_sock_data {
+    LuaRef *cb_read;
+};
+
+ixfd_sock *ixlb_sock_create(struct ixc_context *ctx) {
+    ixfd_sock *ret = ixfd_commonsock_create(ctx);
+    ixlb_sock_data *data = (ixlb_sock_data *) malloc(sizeof(*data));
+
+    data->cb_read = NULL;
+    ret->data = (void *) data;
+    return ret;
+}
+
+void ixlb_sock_set_read_callback(struct ixfd_sock *sock, LuaRef cb) {
+    LuaRef *ref_cb = new LuaRef(cb);
+
+    ixlb_sock_data *data = (ixlb_sock_data *) sock->data;
+    if (data->cb_read != NULL) {
+        delete data->cb_read; }
+    data->cb_read = ref_cb;
+
+    sock->cb_read = [] (ixfd_conn_ctx *ctx, const char *data, size_t len) {
+        LuaRef *cb = ((ixlb_sock_data *) (ctx->sock->data))->cb_read;
+        if (cb && !cb->isNil()) {
+            (*cb)(ctx, data, len); }
+    };
+}
+
 int ixlu_resume(lua_State *L) {
     int v = lua_gettop(L);
     lua_State *Lco = (lua_State *) lua_touserdata(L, 1);
@@ -82,6 +123,20 @@ void ixlb_reg_interface(lua_State *state) {
             addFunction("enable_termcb", &ixc_enable_termcb).
             addFunction("disable_termcb", &ixc_disable_termcb).
             addFunction("spawn_process", &ixlb_spawn_process).
+            beginNamespace("sock").
+                beginClass<ixfd_sock>("socket").endClass().
+                beginClass<ixfd_conn_ctx>("context").endClass().
+                addFunction("create", &ixlb_sock_create).
+                addFunction("free", &ixfd_commonsock_free).
+                beginNamespace("tcp").
+                    addFunction("bind_ip", &ixfd_commonsock_tcp_createnbind).
+                    addFunction("connect_ip", &ixfd_commonsock_tcp_createnconnect).
+                    addFunction("listen", &ixfd_commonsock_tcp_listen).
+                endNamespace().
+                addFunction("setreadbuflen", &ixfd_commonsock_set_bufread_len).
+                addFunction("write", &ixlb_sock_write).
+                addFunction("set_read_callback", &ixlb_sock_set_read_callback).
+            endNamespace().
             beginNamespace("co").
                 addFunction("spawn_process", &ixlb_spawn_process_co).
             endNamespace().
