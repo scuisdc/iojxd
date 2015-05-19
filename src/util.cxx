@@ -66,6 +66,14 @@ void *ixut_cycqueue_dequeue(ixut_cycqueue *entry) {
     return ret;
 }
 
+void *ixut_cycqueue_front(ixut_cycqueue *entry) {
+    assert(entry != NULL);
+    assert(entry->next != NULL);
+    assert(entry->next->next != entry->next);
+
+    return entry->next->next->next->data;
+}
+
 int ixut_cycqueue_empty(ixut_cycqueue *entry) {
     assert(entry != NULL);
     assert(entry->next != NULL);

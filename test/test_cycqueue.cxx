@@ -18,6 +18,7 @@ void test_cycqueue() {
 
     ixut_cycqueue_enqueue(queue, (void *) 1);
     assert(!ixut_cycqueue_empty(queue));
+    assert(ixut_cycqueue_front(queue) == (void *) 1);
 
     assert(ixut_cycqueue_dequeue(queue) == (void *)1);
     assert(ixut_cycqueue_empty(queue));
@@ -25,6 +26,7 @@ void test_cycqueue() {
     ixut_cycqueue_enqueue(queue, (void *) 2);
     ixut_cycqueue_enqueue(queue, (void *) 3);
     ixut_cycqueue_enqueue(queue, (void *) 4);
+    assert(ixut_cycqueue_front(queue) == (void *) 2);
     ixut_cycqueue_enqueue(queue, (void *) 5);
 
     assert(ixut_cycqueue_dequeue(queue) == (void *) 2);
@@ -34,6 +36,7 @@ void test_cycqueue() {
     ixut_cycqueue_enqueue(queue, (void *) 6);
 
     assert(ixut_cycqueue_dequeue(queue) == (void *) 5);
+    assert(ixut_cycqueue_front(queue) == (void *) 6);
     assert(ixut_cycqueue_dequeue(queue) == (void *) 6);
     assert(ixut_cycqueue_empty(queue));
 

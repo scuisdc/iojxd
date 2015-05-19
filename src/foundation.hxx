@@ -12,6 +12,8 @@
 
 #include "child_termcb.hxx"
 
+typedef void (*ixc_void_callback)();
+
 void ixut_spawn_process(const char *file, char * const argv[], ixc_termcb_t cb, void *args);
 
 #endif //IOJXD_FOUNDATION_HXX

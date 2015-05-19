@@ -23,6 +23,8 @@ void ixut_cycqueue_enqueue(ixut_cycqueue *entry, void *data);
 
 void *ixut_cycqueue_dequeue(ixut_cycqueue *entry);
 
+void *ixut_cycqueue_front(ixut_cycqueue *entry);
+
 int ixut_cycqueue_empty(ixut_cycqueue *entry);
 
 #endif //IOJXD_UTIL_HXX
