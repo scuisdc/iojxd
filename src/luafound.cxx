@@ -11,9 +11,7 @@
 
 #include <stdio.h>
 
-#include <lua.hpp>
-#include <LuaBridge/LuaBridge.h>
-
+#include "lua_inc.hxx"
 #include "common.hxx"
 #include "child_termcb.hxx"
 #include "foundation.hxx"
@@ -26,6 +24,7 @@ using luabridge::LuaRef;
 
 void ixlu_initstate(lua_State **state) {
     *state = luaL_newstate();
+    assert((*state) != NULL);
     luaL_openlibs(*state);
 }
 

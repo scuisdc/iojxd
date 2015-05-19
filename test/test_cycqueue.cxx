@@ -9,6 +9,10 @@
 
 #include <assert.h>
 
+// gcc says 'NULL' undefined
+// without this, lol
+#include <stddef.h>
+
 #include <util.hxx>
 
 void test_cycqueue() {

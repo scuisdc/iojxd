@@ -7,14 +7,10 @@
 // We have always treaded the borderland.
 //
 
-#include <lua.hpp>
-#include <LuaBridge/LuaBridge.h>
-
 #include <ev++.h>
 
 #include "common.hxx"
 #include "luafound.hxx"
-#include "sock.hxx"
 
 int main() {
 
