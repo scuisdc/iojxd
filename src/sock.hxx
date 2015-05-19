@@ -27,6 +27,7 @@ struct ixfd_conn_ctx;
 typedef int ixfd_socktype;
 typedef void (*ixfd_data_read_callback)(ixfd_conn_ctx *ctx, const char *data, size_t len);
 typedef void (*ixfd_connect_callback)(ixfd_conn_ctx *ctx);
+typedef void (*ixfd_connect_fail_callback)(ixfd_sock *sock, void *args);
 typedef void (*ixfd_context_callback)(ixfd_conn_ctx *ctx, void *args);
 
 struct ixfd_sock {
@@ -80,7 +81,7 @@ void ixfd_commonsock_free(struct ixfd_sock *sock);
 void ixfd_commonsock_tcp_createnbind(struct ixfd_sock *sock, const char *ip, unsigned short port);
 
 void ixfd_commonsock_tcp_createnconnect(struct ixfd_sock *sock, const char *ip, unsigned short
-    port);
+    port, ixfd_context_callback cb_success, ixfd_connect_fail_callback cb_failed, void *args);
 
 void ixfd_commonsock_tcp_listen(struct ixfd_sock *sock);
 
@@ -88,5 +89,7 @@ bool ixfd_commonsock_write(struct ixfd_conn_ctx *ctx, const char *data, size_t l
                            ixfd_context_callback cb, void *args);
 
 void ixfd_commonsock_set_bufread_len(struct ixfd_conn_ctx *conn, size_t len);
+
+void ixfd_commonsock_close(struct ixfd_conn_ctx *ctx);
 
 #endif //IOJXD_SOCK_HXX

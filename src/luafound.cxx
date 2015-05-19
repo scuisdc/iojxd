@@ -47,10 +47,11 @@ void ixlb_spawn_process(const char *file, LuaRef cb, lua_State *L) {
     LuaRef *ref_cb = new LuaRef(cb);
 
     ixut_spawn_process(file, NULL, [] (ixc_termcb_args *args) {
+        printf("\t\t SPAWN_PROCESS_CALLBACK\n");
         LuaRef *ref_cb_inner = (LuaRef *) (args->data);
         if (!ref_cb_inner->isNil()) {
             (*ref_cb_inner)(args->pid, args->status, args->term_signal); }
-        delete ref_cb_inner;
+        // delete ref_cb_inner;
     }, (void *) ref_cb);
 }
 
@@ -58,11 +59,42 @@ void ixlb_sock_write(struct ixfd_conn_ctx *ctx, const char *data, size_t len, Lu
     LuaRef *ref_cb = new LuaRef(cb);
 
     ixfd_commonsock_write(ctx, data, len, [] (ixfd_conn_ctx *ctx, void *args) {
+        printf("\t\t SOCK_WRITE_CALLBACK\n");
         LuaRef *ref_cb_inner = (LuaRef *) args;
         if (!ref_cb_inner->isNil()) {
             (*ref_cb_inner)(ctx); }
-        delete ref_cb_inner;
+        // delete ref_cb_inner;
     }, (void *) ref_cb);
+}
+
+struct ixlb_connect_data {
+    LuaRef *cb_suc;
+    LuaRef *cb_fail;
+};
+
+void ixlb_sock_connect(struct ixfd_sock *sock, const char *ip, unsigned short port, LuaRef
+        cb_success, LuaRef cb_failed) {
+    ixlb_connect_data *data = (ixlb_connect_data *) malloc(sizeof(ixlb_connect_data));
+    data->cb_suc = new LuaRef(cb_success);
+    data->cb_fail = new LuaRef(cb_failed);
+
+    ixfd_commonsock_tcp_createnconnect(sock, ip, port, [] (ixfd_conn_ctx *ctx, void *args) {
+        ixlb_connect_data *d = (ixlb_connect_data *) args;
+        if (!d->cb_suc->isNil()) {
+            (*d->cb_suc)(ctx); }
+
+        delete d->cb_suc;
+        delete d->cb_fail;
+        free(d);
+    }, [] (ixfd_sock *sock, void *args) {
+        ixlb_connect_data *d = (ixlb_connect_data *) args;
+        if (!d->cb_fail->isNil()) {
+            (*d->cb_fail)(sock); }
+
+        delete d->cb_suc;
+        delete d->cb_fail;
+        free(d);
+    }, (void *) data);
 }
 
 struct ixlb_sock_data {
@@ -87,6 +119,7 @@ void ixlb_sock_set_read_callback(struct ixfd_sock *sock, LuaRef cb) {
     data->cb_read = ref_cb;
 
     sock->cb_read = [] (ixfd_conn_ctx *ctx, const char *data, size_t len) {
+        printf("\t\t SPAWN_READ_CALLBACK\n");
         LuaRef *cb = ((ixlb_sock_data *) (ctx->sock->data))->cb_read;
         if (cb && !cb->isNil()) {
             (*cb)(ctx, data, len); }
@@ -125,12 +158,14 @@ void ixlb_reg_interface(lua_State *state) {
             addFunction("spawn_process", &ixlb_spawn_process).
             beginNamespace("sock").
                 beginClass<ixfd_sock>("socket").endClass().
-                beginClass<ixfd_conn_ctx>("context").endClass().
+                beginClass<ixfd_conn_ctx>("context").
+                    addData("fd", &ixfd_conn_ctx::fd).
+                endClass().
                 addFunction("create", &ixlb_sock_create).
                 addFunction("free", &ixfd_commonsock_free).
                 beginNamespace("tcp").
                     addFunction("bind_ip", &ixfd_commonsock_tcp_createnbind).
-                    addFunction("connect_ip", &ixfd_commonsock_tcp_createnconnect).
+                    addFunction("connect", &ixlb_sock_connect).
                     addFunction("listen", &ixfd_commonsock_tcp_listen).
                 endNamespace().
                 addFunction("setreadbuflen", &ixfd_commonsock_set_bufread_len).

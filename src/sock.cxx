@@ -25,6 +25,13 @@
 #include "foundation.hxx"
 #include "util.hxx"
 
+struct ixfd_connect_args {
+    ixfd_sock *sock;
+    ixfd_context_callback cb_conn;
+    ixfd_connect_fail_callback cb_failed;
+    void *args;
+};
+
 void ixut_set_socket_nonblock(int fd);
 
 struct ixfd_conn_ctx *ixfd_commonsock_create_ctx(ixfd_sock *sock, int fd);
@@ -88,7 +95,7 @@ void ixfd_commonsock_tcp_createnbind(ixfd_sock *sock, const char *ip, unsigned s
 }
 
 void ixfd_commonsock_tcp_createnconnect(struct ixfd_sock *sock, const char *ip, unsigned short
-        port) {
+        port, ixfd_context_callback cb_success, ixfd_connect_fail_callback cb_failed, void *args) {
     assert(sock != NULL);
     assert(sock->type == IXFD_SOCK_UNKNOWN);
 
@@ -100,15 +107,24 @@ void ixfd_commonsock_tcp_createnconnect(struct ixfd_sock *sock, const char *ip, 
     sin.sin_addr.s_addr = inet_addr(ip);
     sin.sin_port = htons(port);
 
+    ixfd_connect_args *ev_args = (ixfd_connect_args *) malloc(sizeof(*ev_args));
+    memset(ev_args, 0, sizeof(*ev_args));
+    ev_args->sock = sock;
+    ev_args->cb_conn = cb_success;
+    ev_args->cb_failed = cb_failed;
+    ev_args->args = args;
+
     sock->event_connect = (ev_io *) malloc(sizeof(*sock->event_connect));
     ev_init(sock->event_connect, ixfd_commonsock_connect_cb);
-    sock->event_connect->data = (void *) sock;
+    sock->event_connect->data = (void *) ev_args;
     ev_io_set(sock->event_connect, sock->fd, EV_WRITE);
 
     int e = connect(sock->fd, (struct sockaddr *) &sin, sizeof(sin));
     if ((!e) || ((e == -1) && errno == EINPROGRESS)) {
         ev_io_start(sock->context->evl, sock->event_connect);
     } else {
+        if (cb_failed != NULL) {
+            cb_failed(sock, args); }
         printf("ixfd_commonsocket_tcp_createnconnect: failed when connecting to %s:%u", ip, port);
         return;
     }
@@ -213,7 +229,8 @@ void ixfd_commonsock_accept_cb(struct ev_loop *loop, ev_io *w_, int revents) {
 
 void ixfd_commonsock_connect_cb(struct ev_loop *loop, ev_io *w_, int revents) {
     assert(w_->data != NULL);
-    ixfd_sock *sock = (ixfd_sock *) w_->data;
+    ixfd_connect_args *args = (ixfd_connect_args *) w_->data;
+    ixfd_sock *sock = args->sock;
 
     if (revents & EV_WRITE) {
 
@@ -223,15 +240,21 @@ void ixfd_commonsock_connect_cb(struct ev_loop *loop, ev_io *w_, int revents) {
         if ((getsockopt(sock->fd, SOL_SOCKET, SO_ERROR, &optval, &optlen)) == 1 ||
                 (optval != 0)) {
 
+            if (args->cb_failed != NULL) {
+                args->cb_failed(sock, args->args); }
+
         } else {
             sock->default_ctx = ixfd_commonsock_create_ctx(sock, sock->fd);
             sock->type = IXFD_SOCK_TCP;
 
-            if (sock->cb_conn) {
-                sock->cb_conn(sock->default_ctx); }
+            ev_io_start(loop, sock->default_ctx->event_read);
+            if (args->cb_conn) {
+                args->cb_conn(sock->default_ctx, args->args); }
         }
 
+        free(args);
         ev_io_stop(loop, w_);
+
     }
 }
 

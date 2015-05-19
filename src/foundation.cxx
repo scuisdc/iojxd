@@ -20,7 +20,7 @@ void ixut_spawn_process(const char *file, char * const argv[], ixc_termcb_t cb, 
 
     switch (pid) {
         case -1:
-
+            printf("%s: fork failed.", __func__);
             break;
         case 0:
             execvp(file, argv);

@@ -16,13 +16,22 @@ function spawn_cotest(file)
 	-- iojx.disable_termcb(iojx.current_context())
 end
 
-coroutine.wrap(spawn_cotest)('./test_exec.py')
+-- coroutine.wrap(spawn_cotest)('./test_exec.py')
 
-iojx.spawn_process('./test_exec.py', function () print('test!') end)
+-- t = function ()
+-- 	iojx.spawn_process('./test_exec.py', function () t() end) end
+-- t()
 
-local sock_server = iojx.sock.create(iojx.current_context())
-iojx.sock.tcp.bind_ip(sock_server, '127.0.0.1', 6666)
-iojx.sock.set_read_callback(sock_server, function (ctx, data, len)
-	iojx.sock.write(ctx, data, len, function () print('written') end)
+local sock_client = iojx.sock.create(iojx.current_context())
+iojx.sock.tcp.connect(sock_client, '127.0.0.1', 6666, function (ctx)
+	local msg = 'Do you have founation?'
+	iojx.sock.write(ctx, msg, #msg)
+end, function (sock)
+	print('connection failed')
 end)
-iojx.sock.tcp.listen(sock_server)
+
+iojx.sock.set_read_callback(sock_client, function (ctx, data, len)
+	print(data)
+	local msg = 'Do you have foundation?'
+	iojx.sock.write(ctx, msg, #msg)
+end)
