@@ -30,8 +30,9 @@ int main() {
 
     ixfd_sock *sock_client = ixfd_commonsock_create(ctx);
     ixfd_commonsocket_tcp_createnconnect(sock_client, "127.0.0.1", 6666);
-
-    ixfd_commonsock_write(sock_client->default_ctx, "xaxa", 5, NULL);
+    sock_client->cb_conn = [] (ixfd_conn_ctx *ctx) {
+        ixfd_commonsock_write(ctx, "xaxa", 5, NULL);
+    };
 
     ixlu_dofile(ctx->state, "init.lua");
 

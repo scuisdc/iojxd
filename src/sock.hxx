@@ -26,13 +26,16 @@ struct ixfd_conn_ctx;
 
 typedef int ixfd_socktype;
 typedef void (*ixfd_data_read_callback)(ixfd_conn_ctx *ctx, const char *data, size_t len);
+typedef void (*ixfd_connect_callback)(ixfd_conn_ctx *ctx);
 
 struct ixfd_sock {
     int fd;
     ev_io *event_accept;
+    ev_io *event_connect;
 
     ixfd_data_read_callback cb_read;
     ixc_void_callback cb_close;
+    ixfd_connect_callback cb_conn;
 
     ixfd_socktype type;
     bool active;

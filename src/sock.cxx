@@ -17,6 +17,7 @@
 #include <sys/fcntl.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <errno.h>
 
 #include <ev++.h>
 
@@ -29,6 +30,7 @@ void ixut_set_socket_nonblock(int fd);
 struct ixfd_conn_ctx *ixfd_commonsock_create_ctx(ixfd_sock *sock, int fd);
 
 void ixfd_commonsock_accept_cb(struct ev_loop *loop, ev_io *w_, int revents);
+void ixfd_commonsock_connect_cb(struct ev_loop *loop, ev_io *w_, int revents);
 void ixfd_commonsock_read_cb(struct ev_loop *loop, ev_io *w_, int revents);
 void ixfd_commonsock_write_cb(struct ev_loop *loop, ev_io *w_, int revents);
 
@@ -44,9 +46,7 @@ struct ixfd_sock *ixfd_commonsock_create(ixc_context *ctx) {
     sock->cb_read = NULL; sock->cb_close = NULL;
     sock->default_ctx = NULL;
 
-    sock->event_accept = (ev_io *) malloc(sizeof(*sock->event_accept));
-    ev_init(sock->event_accept, ixfd_commonsock_accept_cb);
-    sock->event_accept->data = (void *) sock;
+    sock->event_accept = sock->event_connect = NULL;
 
     sock->fd = 0;
     sock->context = ctx;
@@ -69,6 +69,9 @@ void ixfd_commonsocket_tcp_createnbind(ixfd_sock *sock, const char *ip, unsigned
     sock->fd = socket(AF_INET, SOCK_STREAM, 0);
     ixut_set_socket_nonblock(sock->fd);
 
+    sock->event_accept = (ev_io *) malloc(sizeof(*sock->event_accept));
+    ev_init(sock->event_accept, ixfd_commonsock_accept_cb);
+    sock->event_accept->data = (void *) sock;
     ev_io_set(sock->event_accept, sock->fd, EV_READ);
 
     struct sockaddr_in sin;
@@ -97,14 +100,18 @@ void ixfd_commonsocket_tcp_createnconnect(struct ixfd_sock *sock, const char *ip
     sin.sin_addr.s_addr = inet_addr(ip);
     sin.sin_port = htons(port);
 
-    if (connect(sock->fd, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
+    sock->event_connect = (ev_io *) malloc(sizeof(*sock->event_connect));
+    ev_init(sock->event_connect, ixfd_commonsock_connect_cb);
+    sock->event_connect->data = (void *) sock;
+    ev_io_set(sock->event_connect, sock->fd, EV_WRITE);
+
+    int e = connect(sock->fd, (struct sockaddr *) &sin, sizeof(sin));
+    if ((!e) || ((e == -1) && errno == EINPROGRESS)) {
+        ev_io_start(sock->context->evl, sock->event_connect);
+    } else {
         printf("ixfd_commonsocket_tcp_createnconnect: failed when connecting to %s:%u", ip, port);
         return;
     }
-
-    sock->default_ctx = ixfd_commonsock_create_ctx(sock, sock->fd);
-
-    sock->type = IXFD_SOCK_TCP;
 }
 
 void ixfd_commonsocket_tcp_listen(ixfd_sock *sock) {
@@ -202,6 +209,30 @@ void ixfd_commonsock_accept_cb(struct ev_loop *loop, ev_io *w_, int revents) {
 
     ev_io_start(loop, ctx->event_read);
     // ev_io_start(loop, io_write);
+}
+
+void ixfd_commonsock_connect_cb(struct ev_loop *loop, ev_io *w_, int revents) {
+    assert(w_->data != NULL);
+    ixfd_sock *sock = (ixfd_sock *) w_->data;
+
+    if (revents & EV_WRITE) {
+
+        int optval = 0;
+        socklen_t optlen = sizeof(optval);
+
+        if ((getsockopt(sock->fd, SOL_SOCKET, SO_ERROR, &optval, &optlen)) == 1 ||
+                (optval != 0)) {
+
+        } else {
+            sock->default_ctx = ixfd_commonsock_create_ctx(sock, sock->fd);
+            sock->type = IXFD_SOCK_TCP;
+
+            if (sock->cb_conn) {
+                sock->cb_conn(sock->default_ctx); }
+        }
+
+        ev_io_stop(loop, w_);
+    }
 }
 
 void ixfd_commonsock_read_cb(struct ev_loop *loop, ev_io *w_, int revents) {
