@@ -38,6 +38,9 @@ struct ixfd_sock {
     bool active;
     bool connected;
     bool listening;
+
+    ixc_context *context;
+    ixfd_conn_ctx *default_ctx;
 };
 
 struct ixfd_conn_ctx {
@@ -53,6 +56,8 @@ struct ixfd_conn_ctx {
 
     ixfd_data_read_callback cb_read;
     ixc_void_callback cb_close;
+
+    bool write_launched;
 };
 
 struct ixfd_sock_write_ctx {
@@ -62,13 +67,16 @@ struct ixfd_sock_write_ctx {
     const char *data_org;
 };
 
-struct ixfd_sock *ixfd_commonsock_create();
+struct ixfd_sock *ixfd_commonsock_create(struct ixc_context *ctx);
 
 void ixfd_commonsock_free(struct ixfd_sock *sock);
 
-void ixfd_commonsocket_tcp_createnbind(ixfd_sock *sock, const char *ip, unsigned short port);
+void ixfd_commonsocket_tcp_createnbind(struct ixfd_sock *sock, const char *ip, unsigned short port);
 
-void ixfd_commonsocket_tcp_listen(ixc_context *ctx, ixfd_sock *sock);
+void ixfd_commonsocket_tcp_createnconnect(struct ixfd_sock *sock, const char *ip, unsigned short
+    port);
+
+void ixfd_commonsocket_tcp_listen(struct ixfd_sock *sock);
 
 bool ixfd_commonsock_write(struct ixfd_conn_ctx *ctx, const char *data, size_t len,
                            ixc_void_callback cb);

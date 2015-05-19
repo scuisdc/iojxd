@@ -20,13 +20,18 @@ int main() {
 
     ixc_context *ctx = ixc_create_context();
 
-    ixfd_sock *sock_echo = ixfd_commonsock_create();
-    ixfd_commonsocket_tcp_createnbind(sock_echo, "127.0.0.1", 6666);
-    ixfd_commonsocket_tcp_listen(ctx, sock_echo);
+//    ixfd_sock *sock_echo = ixfd_commonsock_create(ctx);
+//    ixfd_commonsocket_tcp_createnbind(sock_echo, "127.0.0.1", 6666);
+//    ixfd_commonsocket_tcp_listen(sock_echo);
+//
+//    sock_echo->cb_read = [] (ixfd_conn_ctx *ctx, const char *data, size_t len) {
+//        ixfd_commonsock_write(ctx, data, len, NULL);
+//    };
 
-    sock_echo->cb_read = [] (ixfd_conn_ctx *ctx, const char *data, size_t len) {
-        ixfd_commonsock_write(ctx, data, len, NULL);
-    };
+    ixfd_sock *sock_client = ixfd_commonsock_create(ctx);
+    ixfd_commonsocket_tcp_createnconnect(sock_client, "127.0.0.1", 6666);
+
+    ixfd_commonsock_write(sock_client->default_ctx, "xaxa", 5, NULL);
 
     ixlu_dofile(ctx->state, "init.lua");
 
