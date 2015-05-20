@@ -18,6 +18,7 @@
 #include "lbext.hxx"
 
 #include "sock.hxx"
+#include "timer.hxx"
 
 // using namespace luabridge;
 using luabridge::LuaRef;
@@ -46,7 +47,6 @@ void ixlb_spawn_process(const char *file, LuaRef cb, lua_State *L) {
     LuaRef *ref_cb = new LuaRef(cb);
 
     ixut_spawn_process(file, NULL, [] (ixc_termcb_args *args) {
-        printf("\t\t SPAWN_PROCESS_CALLBACK\n");
         LuaRef *ref_cb_inner = (LuaRef *) (args->data);
         if (!ref_cb_inner->isNil()) {
             (*ref_cb_inner)(args->pid, args->status, args->term_signal); }
@@ -58,7 +58,6 @@ void ixlb_sock_write(struct ixfd_conn_ctx *ctx, const char *data, size_t len, Lu
     LuaRef *ref_cb = new LuaRef(cb);
 
     ixfd_commonsock_write(ctx, data, len, [] (ixfd_conn_ctx *ctx, void *args) {
-        printf("\t\t SOCK_WRITE_CALLBACK\n");
         LuaRef *ref_cb_inner = (LuaRef *) args;
         if (!ref_cb_inner->isNil()) {
             (*ref_cb_inner)(ctx); }
@@ -118,7 +117,6 @@ void ixlb_sock_set_read_callback(struct ixfd_sock *sock, LuaRef cb) {
     data->cb_read = ref_cb;
 
     sock->cb_read = [] (ixfd_conn_ctx *ctx, const char *data, size_t len) {
-        printf("\t\t SPAWN_READ_CALLBACK\n");
         LuaRef *cb = ((ixlb_sock_data *) (ctx->sock->data))->cb_read;
         if (cb && !cb->isNil()) {
             (*cb)(ctx, data, len); }

@@ -11,6 +11,7 @@
 
 #include "common.hxx"
 #include "luafound.hxx"
+#include "timer.hxx"
 
 int main() {
 
@@ -29,6 +30,11 @@ int main() {
 //                                       [] (ixfd_conn_ctx *ctx, void *args) {
 //                                           ixfd_commonsock_write(ctx, "ooolive", 8, NULL, NULL);
 //                                       }, NULL, NULL);
+
+    ixut_timer *timer = ixut_timer_create(ctx);
+    ixut_timer_start(timer, 5, [] (ixut_timer *timer, void *args) {
+        printf("timeout\n");
+    }, NULL);
 
     ixlu_dofile(ctx->state, "init.lua");
 
