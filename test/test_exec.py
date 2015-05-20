@@ -5,6 +5,8 @@ import time
 
 def main():
     print('Hellor Foundation!')
+    import sys
+    print(sys.argv)
     time.sleep(2)
     print('Gooder Bye Foundation!')
 

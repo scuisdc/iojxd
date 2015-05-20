@@ -17,8 +17,14 @@
 #include "foundation.hxx"
 #include "lbext.hxx"
 
+#include "debug.hxx"
 #include "sock.hxx"
 #include "timer.hxx"
+#include "childprocess.hxx"
+
+#include <unistd.h>
+
+#include <ev++.h>
 
 // using namespace luabridge;
 using luabridge::LuaRef;
@@ -133,6 +139,38 @@ void ixlb_timer_start(struct ixut_timer *timer, double interval, LuaRef cb) {
     }, (void *) ref_cb);
 }
 
+int ixlb_fork(LuaRef cb) {
+    LuaRef *ref_cb = new LuaRef(cb);
+
+    return ixut_fork([] (void *args) {
+        LuaRef *cb_inner = (LuaRef *) args;
+        (*cb_inner)();
+    }, (void *) ref_cb);
+}
+
+pid_t ixlb_getpid() {
+    return getpid(); }
+
+void ixlb_init_loop(lua_State *L) {
+    ev_loop_fork(EV_DEFAULT);
+    ixlb_get_cur_ctx(L)->evl = ev_default_loop(0);
+}
+
+int ixlb_exec(lua_State *L) {
+    int l = lua_gettop(L);
+
+    const char **argv = (const char **) malloc((l+1) * sizeof(char *));
+    for (size_t i = 0; i < l; i++) {
+        const char *arg = lua_tostring(L, i+1);
+        argv[i] = arg;
+    }
+    argv[l] = NULL;
+
+    int e = execvp(argv[0], (char *const *) argv);
+    ASSERT_FOUNDATION();
+    return 0;
+}
+
 int ixlu_resume(lua_State *L) {
     int v = lua_gettop(L);
     lua_State *Lco = (lua_State *) lua_touserdata(L, 1);
@@ -188,6 +226,12 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("again", &ixut_timer_again).
                 addFunction("setimeout", &ixut_timer_setimeout).
                 addFunction("tick", &ixut_timer_tick).
+            endNamespace().
+            beginNamespace("util").
+                addFunction("fork", &ixlb_fork).
+                addFunction("getpid", &ixlb_getpid).
+                addFunction("init_loop", &ixlb_init_loop).
+                addCFunction("exec", &ixlb_exec).
             endNamespace().
             beginNamespace("co").
                 addFunction("spawn_process", &ixlb_spawn_process_co).
