@@ -15,6 +15,7 @@
 #include "common.hxx"
 #include "util.hxx"
 #include "foundation.hxx"
+#include "timer.hxx"
 
 #define IXFD_SOCK_UNKNOWN 0
 #define IXFD_SOCK_TCP 1
@@ -26,7 +27,6 @@ struct ixfd_conn_ctx;
 
 typedef int ixfd_socktype;
 typedef void (*ixfd_data_read_callback)(ixfd_conn_ctx *ctx, const char *data, size_t len);
-typedef void (*ixfd_connect_callback)(ixfd_conn_ctx *ctx);
 typedef void (*ixfd_connect_fail_callback)(ixfd_sock *sock, void *args);
 typedef void (*ixfd_context_callback)(ixfd_conn_ctx *ctx, void *args);
 
@@ -37,7 +37,6 @@ struct ixfd_sock {
 
     ixfd_data_read_callback cb_read;
     ixc_void_callback cb_close;
-    ixfd_connect_callback cb_conn;
 
     ixfd_socktype type;
     bool active;

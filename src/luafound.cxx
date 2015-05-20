@@ -123,6 +123,16 @@ void ixlb_sock_set_read_callback(struct ixfd_sock *sock, LuaRef cb) {
     };
 }
 
+void ixlb_timer_start(struct ixut_timer *timer, double interval, LuaRef cb) {
+    LuaRef *ref_cb = new LuaRef(cb);
+
+    ixut_timer_start(timer, interval, [] (ixut_timer *timer, void *args) {
+        LuaRef *cb_inner = (LuaRef *) args;
+        if (!cb_inner->isNil()) {
+            (*cb_inner)(timer); }
+    }, (void *) ref_cb);
+}
+
 int ixlu_resume(lua_State *L) {
     int v = lua_gettop(L);
     lua_State *Lco = (lua_State *) lua_touserdata(L, 1);
@@ -168,6 +178,16 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("setreadbuflen", &ixfd_commonsock_set_bufread_len).
                 addFunction("write", &ixlb_sock_write).
                 addFunction("set_read_callback", &ixlb_sock_set_read_callback).
+            endNamespace().
+            beginNamespace("timer").
+                beginClass<ixut_timer>("timer").endClass().
+                addFunction("create", &ixut_timer_create).
+                addFunction("free", &ixut_timer_free).
+                addFunction("start", &ixlb_timer_start).
+                addFunction("stop", &ixut_timer_stop).
+                addFunction("again", &ixut_timer_again).
+                addFunction("setimeout", &ixut_timer_setimeout).
+                addFunction("tick", &ixut_timer_tick).
             endNamespace().
             beginNamespace("co").
                 addFunction("spawn_process", &ixlb_spawn_process_co).

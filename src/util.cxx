@@ -31,11 +31,11 @@ void ixut_cycqueue_free(ixut_cycqueue *entry) {
     assert(entry != NULL);
     assert(entry->next != NULL);
 
-    while (entry != entry->next) {
-        ixut_cycqueue *next = entry->next;
-        free(entry);
-        entry = next;
+    while (!ixut_cycqueue_empty(entry)) {
+        ixut_cycqueue_dequeue(entry);
     }
+    free(entry->next);
+    free(entry);
 }
 
 void ixut_cycqueue_enqueue(ixut_cycqueue *entry, void *data) {

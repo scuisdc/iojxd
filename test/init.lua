@@ -22,13 +22,17 @@ end
 -- 	iojx.spawn_process('./test_exec.py', function () t() end) end
 -- t()
 
-local sock_server = iojx.sock.create(iojx.current_context())
-iojx.sock.tcp.bind_ip(sock_server, '127.0.0.1', 6666)
-
-iojx.sock.set_read_callback(sock_server, function (ctx, data, len)
-	iojx.spawn_process(data, function ()
-		iojx.sock.write(ctx, 'finished', #'finished')
+local sock_client = iojx.sock.create(iojx.current_context())
+iojx.sock.tcp.connect(sock_client, '127.0.0.1', 6666, function (ctx)
+	timer = iojx.timer.create(iojx.current_context())
+	iojx.timer.setimeout(timer)
+	iojx.timer.start(timer, 5, function (_timer)
+		print('timeout')
 	end)
 end)
 
-iojx.sock.tcp.listen(sock_server)
+iojx.sock.set_read_callback(sock_client, function (ctx, data, len)
+	iojx.timer.tick(timer)
+	print(data)
+	iojx.sock.write(ctx, data, len)
+end)
