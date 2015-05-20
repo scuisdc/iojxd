@@ -55,6 +55,10 @@ iojx.timer.start(timer_a, 3, function ()
 		end)
 	end)
 	print('Forked ID: ', pid)
+	local watcher = iojx.child_process.create(iojx.current_context())
+	iojx.child_process.start(watcher, pid, function ()
+		print('process ended.')
+	end)
 
 
 end)

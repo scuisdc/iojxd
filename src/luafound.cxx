@@ -148,6 +148,16 @@ int ixlb_fork(LuaRef cb) {
     }, (void *) ref_cb);
 }
 
+void ixlb_childw_start(ixut_child_watcher *childw, pid_t pid, LuaRef cb) {
+    LuaRef *ref_cb = new LuaRef(cb);
+
+    ixut_childw_start(childw, pid, [] (ixut_child_watcher *watcher, void *args) {
+        LuaRef *cb_inner = (LuaRef *) args;
+        if (!cb_inner->isNil()) {
+            (*cb_inner)(watcher); }
+    }, (void *) ref_cb);
+}
+
 pid_t ixlb_getpid() {
     return getpid(); }
 
@@ -232,6 +242,19 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("getpid", &ixlb_getpid).
                 addFunction("init_loop", &ixlb_init_loop).
                 addCFunction("exec", &ixlb_exec).
+            endNamespace().
+            beginNamespace("child_process").
+                beginClass<ixut_child_watcher>("watcher").endClass().
+                beginClass<ixut_child_exitstatus>("status").
+                    addData("status", &ixut_child_exitstatus::status).
+                    addData("exit_cause", &ixut_child_exitstatus::exit_cause).
+                    addData("termsig", &ixut_child_exitstatus::term_sig).
+                endClass().
+                addFunction("create", &ixut_childw_create).
+                addFunction("free", &ixut_childw_free).
+                addFunction("start", &ixlb_childw_start).
+                addFunction("getpid", &ixut_childw_getpid).
+                addFunction("getstatus", &ixut_childw_getstatus).
             endNamespace().
             beginNamespace("co").
                 addFunction("spawn_process", &ixlb_spawn_process_co).
