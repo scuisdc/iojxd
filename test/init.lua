@@ -3,66 +3,31 @@ print('Hellor Worlder!')
 
 iojx.enable_termcb(iojx.current_context())
 
-function spawn_co(file)
-	iojx.co.spawn_process(file)
-	return coroutine.yield()
-end
-
-function spawn_cotest(file)
-	print('spawn_cotest: ready')
-	spawn_co(file)
-	print("spawn_cotest: end")
-
-	-- iojx.disable_termcb(iojx.current_context())
-end
-
--- coroutine.wrap(spawn_cotest)('./test_exec.py')
-
--- t = function ()
--- 	iojx.spawn_process('./test_exec.py', function () t() end) end
--- t()
-
-local timer_a = iojx.timer.create(iojx.current_context())
-iojx.timer.start(timer_a, 3, function ()
+iojxx.timer(iojx.current_context(), function ()
 
 	print('timer_a (3) triggered')
-	local timer_b = iojx.timer.create(iojx.current_context())
 
-	iojx.timer.start(timer_b, 3, function ()
+	iojxx.timer(iojx.current_context(), function ()
 		print('timer_b (3) triggered, pid', iojx.util.getpid())
-		local timer_e = iojx.timer.create(iojx.current_context())
-		iojx.timer.start(timer_e, 6, function ()
+
+		iojxx.timer(iojx.current_context(), function ()
 			print('timer_e (6) triggered, pid', iojx.util.getpid())
-		end)
-	end)
+		end):start(6)
+	end):start(3)
 
 	print('Parent ID: ', iojx.util.getpid())
-	local pid = iojx.util.fork(function ()
+	local pid = iojxx.fork(function ()
 		print("I'm the forked one.")
-		print('My ID: ', iojx.util.getpid())
+		print('My PID: ', iojx.util.getpid())
 
 		iojx.util.exec('./test_exec.py', 'WTF!', 1)
-		iojx.util.init_loop()
-
-		local timer_d = iojx.timer.create(iojx.current_context())
-		iojx.timer.start(timer_d, 1, function ()
-			print('timer_d (1) triggered, pid', iojx.util.getpid())
-		end)
-
-		local timer_c = iojx.timer.create(iojx.current_context())
-		iojx.timer.start(timer_c, 5, function ()
-			print('timer_c (5) triggered, pid', iojx.util.getpid())
-		end)
-	end)
+	end).pid
 	print('Forked ID: ', pid)
-	local watcher = iojx.child_process.create(iojx.current_context())
-	iojx.child_process.start(watcher, pid, function ()
+	iojxx.child_watcher(iojx.current_context(), function ()
 		print('process ended.')
-	end)
+	end):start(pid)
 
-
-end)
-
+end):start(3)
 
 --local sock_client = iojx.sock.create(iojx.current_context())
 --iojx.sock.tcp.connect(sock_client, '127.0.0.1', 6666, function (ctx)

@@ -35,6 +35,7 @@ ixut_timer *ixut_timer_create(ixc_context *context) {
 
 void ixut_timer_free(ixut_timer *timer) {
     assert(timer != NULL);
+    assert(timer->_timer != NULL);
     assert(!timer->active);
 
     free(timer->_timer);
@@ -88,8 +89,7 @@ void ixut_timer_cb(struct ev_loop *loop, ev_timer *w, int revents) {
     ixut_timer *timer = (ixut_timer *) w->data;
     timer->active = false;
     if (timer->cb != NULL) {
-        (*timer->cb)(timer, timer->args);
-    }
+        (*timer->cb)(timer, timer->args); }
 }
 
 void ixut_timeout_cb(struct ev_loop *loop, ev_timer *w, int revents) {

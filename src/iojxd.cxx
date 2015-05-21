@@ -13,6 +13,8 @@
 #include "luafound.hxx"
 #include "timer.hxx"
 
+#include "lua_inc.hxx"
+
 int main() {
 
     ixc_context *ctx = ixc_create_context();
@@ -34,6 +36,10 @@ int main() {
     ixlu_dofile(ctx->state, "init.lua");
 
     ev_run(ctx->evl, 0);
+
+    lua_close(ctx->state);
+    ev_loop_destroy(ctx->evl);
+    free(ctx);
 
     return 0;
 }

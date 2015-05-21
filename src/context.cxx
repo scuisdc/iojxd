@@ -16,11 +16,13 @@
 #include "lua_inc.hxx"
 #include "debug.hxx"
 #include "luafound.hxx"
+#include "luafoundx.hxx"
 
 ixc_context *ixc_create_context() {
     ixc_context *r = (ixc_context *) malloc(sizeof(*r));
     ixlu_initstate(&r->state);
     ixlb_reg_interface(r->state);
+    ixlbx_reg_interface(r->state);
 
     r->evl = ev_default_loop(0);
 
