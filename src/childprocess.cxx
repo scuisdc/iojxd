@@ -9,13 +9,13 @@
 
 #include "childprocess.hxx"
 
+#include <string.h>
 #include <unistd.h>
 
 #include <ev++.h>
 
 #include "debug.hxx"
 #include "common.hxx"
-#include "sock.hxx"
 
 void ixut_childw_cb(struct ev_loop *loop, ev_child *w, int revent);
 

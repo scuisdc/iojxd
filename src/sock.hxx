@@ -14,7 +14,6 @@
 
 #include "common.hxx"
 #include "util.hxx"
-#include "foundation.hxx"
 #include "timer.hxx"
 
 #define IXFD_SOCK_UNKNOWN 0
@@ -36,7 +35,7 @@ struct ixfd_sock {
     ev_io *event_connect;
 
     ixfd_data_read_callback cb_read;
-    ixc_void_callback cb_close;
+    // ixc_void_callback cb_close;
 
     ixfd_socktype type;
     bool active;
@@ -60,7 +59,7 @@ struct ixfd_conn_ctx {
     char *buf_read;
 
     ixfd_data_read_callback cb_read;
-    ixc_void_callback cb_close;
+    // ixc_void_callback cb_close;
 
     bool write_launched;
 };

@@ -1,45 +1,52 @@
 
-print('Hellor Worlder!')
+inside = function (array, element, cmp)
+	if cmp == nil then cmp = function (x, y) return x == y end end
+	for i, v in ipairs(array) do
+		if cmp(v, element) then return true end
+	end
+	return false
+end
 
-iojx.enable_termcb(iojx.current_context())
+sock_write = function (sock, data)
+	data = tostring(data)
+	iojx.sock.write(sock, data, #data)
+end
 
-iojxx.timer(iojx.current_context(), function ()
+authed_users = { }
 
-	print('timer_a (3) triggered')
+local server = iojx.sock.create(iojx.current_context())
 
-	iojxx.timer(iojx.current_context(), function ()
-		print('timer_b (3) triggered, pid', iojx.util.getpid())
+iojx.sock.tcp.bind_ip(server, '127.0.0.1', 6666)
+iojx.sock.set_read_callback(server, function (ctx, data, len)
+	print('calling read callback ...')
+	local message = '500'
+	-- ATTENTION: Do not compare two LuaBridge userdatas directly!
+	if inside(authed_users, ctx, function (x, y) return x.fd == y.fd end) then
+		message = 'You are authed, executing your task ...'
+		iojx.sock.write(ctx, message, #message)
 
-		iojxx.timer(iojx.current_context(), function ()
-			print('timer_e (6) triggered, pid', iojx.util.getpid())
-		end):start(6)
-	end):start(3)
+		local context = {
 
-	print('Parent ID: ', iojx.util.getpid())
-	local pid = iojxx.fork(function ()
-		print("I'm the forked one.")
-		print('My PID: ', iojx.util.getpid())
+		}
+		
+		local f = loadstring(data)
+		if f ~= nil then
+			setfenv(f, context)
 
-		iojx.util.exec('./test_exec.py', 'WTF!', 1)
-	end).pid
-	print('Forked ID: ', pid)
-	iojxx.child_watcher(iojx.current_context(), function ()
-		print('process ended.')
-	end):start(pid)
+			local succeeded, result = pcall(f)
+			sock_write(ctx, tostring(result))
+		end
+	else
+		if string.sub(data, 1, 5) == '$AUTH' then
+			table.insert(authed_users, ctx)
+			message = 'You are now authed ...'
+			iojx.sock.write(ctx, message, #message)
+		else
+			message = 'You are not authed to do anything ...'
+			iojx.sock.write(ctx, message, #message)
+		end
+	end
+	print(message)
+end)
 
-end):start(3)
-
---local sock_client = iojx.sock.create(iojx.current_context())
---iojx.sock.tcp.connect(sock_client, '127.0.0.1', 6666, function (ctx)
-	--timer = iojx.timer.create(iojx.current_context())
-	--iojx.timer.setimeout(timer)
-	--iojx.timer.start(timer, 5, function (_timer)
-		--print('timeout')
-	--end)
---end)
-
---iojx.sock.set_read_callback(sock_client, function (ctx, data, len)
-	--iojx.timer.tick(timer)
-	--print(data)
-	--iojx.sock.write(ctx, data, len)
---end)
+iojx.sock.tcp.listen(server)

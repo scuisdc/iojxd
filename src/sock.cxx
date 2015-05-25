@@ -22,7 +22,6 @@
 #include <ev++.h>
 
 #include "common.hxx"
-#include "foundation.hxx"
 #include "util.hxx"
 
 struct ixfd_connect_args {
@@ -50,7 +49,7 @@ struct ixfd_sock *ixfd_commonsock_create(ixc_context *ctx) {
 
     sock->type = IXFD_SOCK_UNKNOWN;
     sock->connected = sock->active = sock->listening = false;
-    sock->cb_read = NULL; sock->cb_close = NULL;
+    sock->cb_read = NULL; // sock->cb_close = NULL;
     sock->default_ctx = NULL;
 
     sock->event_accept = sock->event_connect = NULL;
@@ -195,7 +194,7 @@ struct ixfd_conn_ctx *ixfd_commonsock_create_ctx(ixfd_sock *sock, int fd) {
     ctx->write_launched = false;
 
     ctx->cb_read = ctx->sock->cb_read;
-    ctx->cb_close = ctx->sock->cb_close;
+    // ctx->cb_close = ctx->sock->cb_close;
 
     ev_io *io_read = (ev_io *) malloc(sizeof(*io_read));
     ev_init(io_read, ixfd_commonsock_read_cb);
@@ -275,8 +274,8 @@ void ixfd_commonsock_read_cb(struct ev_loop *loop, ev_io *w_, int revents) {
         free(ctx->event_read); free(ctx->event_write);
 
         close(ctx->fd);
-        if (ctx->cb_close != NULL) {
-            ctx->cb_close(); }
+//        if (ctx->cb_close != NULL) {
+//            ctx->cb_close(); }
 
         free(ctx->buf_read);
         ixut_cycqueue_free(ctx->buf_write);
