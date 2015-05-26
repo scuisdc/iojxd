@@ -30,6 +30,7 @@ struct ixut_child_watcher {
 };
 
 struct ixut_child_exitstatus {
+    int status_raw;
     int status;
     int exit_cause;
     int term_sig;

@@ -101,6 +101,7 @@ ixut_child_exitstatus ixut_childw_getstatus(ixut_child_watcher *childw) {
 
     int raw = childw->event->rstatus;
 
+    status.status_raw = raw;
     status.status = WEXITSTATUS(raw);
     status.term_sig = WTERMSIG(raw);
 

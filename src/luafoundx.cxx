@@ -93,6 +93,9 @@ struct ixlbx_child_watcher : public ixlbx_ref_base {
         }, (void *) this);
     }
 
+    ixut_child_exitstatus get_status() {
+        return ixut_childw_getstatus(m_impl); }
+
     private:
 
         ixut_child_watcher *m_impl;
@@ -117,6 +120,7 @@ void ixlbx_reg_interface(lua_State *state) {
             beginClass<ixlbx_child_watcher>("child_watcher").
                 addConstructor<void (*)(ixc_context *, LuaRef), RefCountedPtr<ixlbx_child_watcher>>().
                 addFunction("start", &ixlbx_child_watcher::start).
+                addFunction("get_status", &ixlbx_child_watcher::get_status).
             endClass().
         endNamespace();
 }

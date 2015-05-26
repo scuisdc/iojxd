@@ -21,6 +21,7 @@
 #include "sock.hxx"
 #include "timer.hxx"
 #include "childprocess.hxx"
+#include "sandbox.hxx"
 
 #include <unistd.h>
 
@@ -181,6 +182,13 @@ int ixlb_exec(lua_State *L) {
     return 0;
 }
 
+FILE *ixlb_freopen(const char *filename, const char *mode, FILE *stream) {
+    return freopen(filename, mode, stream); }
+
+FILE *ixlb_get_stdin() { return stdin; }
+FILE *ixlb_get_stdout() { return stdout; }
+FILE *ixlb_get_stderr() { return stderr; }
+
 int ixlu_resume(lua_State *L) {
     int v = lua_gettop(L);
     lua_State *Lco = (lua_State *) lua_touserdata(L, 1);
@@ -238,14 +246,20 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("tick", &ixut_timer_tick).
             endNamespace().
             beginNamespace("util").
+                beginClass<FILE>("cFILE").endClass().
                 addFunction("fork", &ixlb_fork).
                 addFunction("getpid", &ixlb_getpid).
                 addFunction("init_loop", &ixlb_init_loop).
                 addCFunction("exec", &ixlb_exec).
+                addFunction("freopen", &ixlb_freopen).
+                addFunction("stdin", &ixlb_get_stdin).
+                addFunction("stderr", &ixlb_get_stderr).
+                addFunction("stdout", &ixlb_get_stdout).
             endNamespace().
             beginNamespace("child_process").
                 beginClass<ixut_child_watcher>("watcher").endClass().
                 beginClass<ixut_child_exitstatus>("status").
+                    addData("status_raw", &ixut_child_exitstatus::status_raw).
                     addData("status", &ixut_child_exitstatus::status).
                     addData("exit_cause", &ixut_child_exitstatus::exit_cause).
                     addData("termsig", &ixut_child_exitstatus::term_sig).
@@ -255,6 +269,12 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("start", &ixlb_childw_start).
                 addFunction("getpid", &ixut_childw_getpid).
                 addFunction("getstatus", &ixut_childw_getstatus).
+            endNamespace().
+            beginNamespace("sandbox").
+                addFunction("reslimit", &ixut_reslimit).
+                addFunction("reslimit_d", &ixut_reslimit_d).
+                addFunction("setuid", &ixut_setuid).
+                addFunction("setgid", &ixut_setgid).
             endNamespace().
             beginNamespace("co").
                 addFunction("spawn_process", &ixlb_spawn_process_co).
