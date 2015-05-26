@@ -24,4 +24,6 @@ struct ixc_context {
 
 ixc_context *ixc_create_context();
 
+void ixc_destroy_context(ixc_context *ctx);
+
 #endif //IOJXD_CONTEXT_HXX

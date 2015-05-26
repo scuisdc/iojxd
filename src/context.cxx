@@ -21,6 +21,7 @@
 ixc_context *ixc_create_context() {
     ixc_context *r = (ixc_context *) malloc(sizeof(*r));
     ixlu_initstate(&r->state);
+
     ixlb_reg_interface(r->state);
     ixlbx_reg_interface(r->state);
 
@@ -31,4 +32,18 @@ ixc_context *ixc_create_context() {
     lua_settable(r->state, LUA_REGISTRYINDEX);
 
     return r;
+}
+
+void ixc_destroy_context(ixc_context *ctx) {
+    assert(ctx != NULL);
+    assert(ctx->state != NULL);
+    assert(ctx->evl != NULL);
+
+    lua_close(ctx->state);
+    ev_loop_destroy(ctx->evl);
+
+    ctx->state = NULL;
+    ctx->evl = NULL;
+
+    free(ctx);
 }

@@ -19,8 +19,8 @@
 void ixut_reslimit_d(int resource, long soft, long hard) {
     rlimit rl = { 0, 0 };
     rl.rlim_cur = soft, rl.rlim_max = hard;
-    printf("Setting resource limit %d %d %d ...\n", resource, soft, hard);
-    if (setrlimit(resource, &rl) != 0) throw std::runtime_error("error in ixut_reslimit");
+    if (setrlimit(resource, &rl) != 0)
+        printf("setrlimit() failed: %d %ld %ld.\n", resource, soft, hard);
 }
 
 void ixut_reslimit(int resource, long val) {

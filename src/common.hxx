@@ -12,6 +12,4 @@
 
 #include "context.hxx"
 
-extern ixc_context *ctx_instance;
-
 #endif //IOJXD_COMMON_HXX

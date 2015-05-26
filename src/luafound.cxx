@@ -189,6 +189,9 @@ FILE *ixlb_get_stdin() { return stdin; }
 FILE *ixlb_get_stdout() { return stdout; }
 FILE *ixlb_get_stderr() { return stderr; }
 
+int ixlb_fflush(FILE *stream) {
+    return fflush(stream); }
+
 int ixlu_resume(lua_State *L) {
     int v = lua_gettop(L);
     lua_State *Lco = (lua_State *) lua_touserdata(L, 1);
@@ -255,6 +258,7 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("stdin", &ixlb_get_stdin).
                 addFunction("stderr", &ixlb_get_stderr).
                 addFunction("stdout", &ixlb_get_stdout).
+                addFunction("fflush", &ixlb_fflush).
             endNamespace().
             beginNamespace("child_process").
                 beginClass<ixut_child_watcher>("watcher").endClass().
