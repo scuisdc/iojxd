@@ -41,6 +41,7 @@ struct ixfd_sock {
     bool active;
     bool connected;
     bool listening;
+    bool passive_read;
 
     ixc_context *context;
     ixfd_conn_ctx *default_ctx;
@@ -89,5 +90,7 @@ bool ixfd_commonsock_write(struct ixfd_conn_ctx *ctx, const char *data, size_t l
 void ixfd_commonsock_set_bufread_len(struct ixfd_conn_ctx *conn, size_t len);
 
 void ixfd_commonsock_close(struct ixfd_conn_ctx *ctx);
+
+int ixfd_commonsock_read(struct ixfd_conn_ctx *ctx, char *buf, size_t len);
 
 #endif //IOJXD_SOCK_HXX

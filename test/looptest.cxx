@@ -17,11 +17,11 @@
 #include <string.h>
 
 #include <unistd.h>
-#include <sandbox.h>
+// #include <sandbox.h>
 
 char const * syscall_name(int const nr);
 
-const long long ARRAY_SIZE = 32767*32767*2;
+const long long ARRAY_SIZE = 32767*512;
 
 int cmp(const void *a, const void *b) {
     return (int)((*(const int *)a) < (*(const int *)b));
@@ -52,7 +52,7 @@ int main(int argc, const char *argv[]) {
     // printf("%s\n", t);
 
     int *array_tosort = (int *)malloc(sizeof(int) * ARRAY_SIZE);
-    printf("%x\n", array_tosort);
+    printf("%lx\n", (long) array_tosort);
 
     for (unsigned long long i = 0; i < ARRAY_SIZE; i++)
         array_tosort[i] = rand();

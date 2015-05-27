@@ -49,6 +49,7 @@ struct ixfd_sock *ixfd_commonsock_create(ixc_context *ctx) {
 
     sock->type = IXFD_SOCK_UNKNOWN;
     sock->connected = sock->active = sock->listening = false;
+    sock->passive_read = false;
     sock->cb_read = NULL; // sock->cb_close = NULL;
     sock->default_ctx = NULL;
 
@@ -262,15 +263,45 @@ void ixfd_commonsock_read_cb(struct ev_loop *loop, ev_io *w_, int revents) {
     assert(w_->data != NULL);
     struct ixfd_conn_ctx *ctx = (struct ixfd_conn_ctx *) w_->data;
 
-    memset(ctx->buf_read, 0, ctx->size_bufread+1);
-    int n = read(ctx->fd, ctx->buf_read, ctx->size_bufread);
-    if (n > 0) {
-        if (ctx->cb_read != NULL) {
-            ctx->cb_read(ctx, ctx->buf_read, n); }
-    } else if (n < 0) {
+    if (!ctx->sock->passive_read) {
+        memset(ctx->buf_read, 0, ctx->size_bufread + 1);
+        int n = read(ctx->fd, ctx->buf_read, ctx->size_bufread);
+        if (n > 0) {
+            if (ctx->cb_read != NULL) {
+                ctx->cb_read(ctx, ctx->buf_read, n);
+            }
+        } else if (n < 0) {
 
+        } else {
+            ev_io_stop(loop, ctx->event_read);
+            free(ctx->event_read);
+            free(ctx->event_write);
+
+            close(ctx->fd);
+//        if (ctx->cb_close != NULL) {
+//            ctx->cb_close(); }
+
+            free(ctx->buf_read);
+            ixut_cycqueue_free(ctx->buf_write);
+
+            free(ctx);
+        }
     } else {
-        ev_io_stop(loop, ctx->event_read);
+        ctx->cb_read(ctx, NULL, 0);
+    }
+}
+
+int ixfd_commonsock_read(struct ixfd_conn_ctx *ctx, char *buf, size_t len) {
+    assert(ctx != NULL);
+    assert(buf != NULL);
+
+    int n = read(ctx->fd, buf, len);
+    if (n > 0) {
+        return n;
+    } else if (n < 0) {
+        return -1;
+    } else {
+        ev_io_stop(ctx->sock->context->evl, ctx->event_read);
         free(ctx->event_read); free(ctx->event_write);
 
         close(ctx->fd);

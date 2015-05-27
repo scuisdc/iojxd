@@ -29,17 +29,3 @@ iojxx.timer(iojx.current_context(), function ()
 
 end):start(3)
 
---local sock_client = iojx.sock.create(iojx.current_context())
---iojx.sock.tcp.connect(sock_client, '127.0.0.1', 6666, function (ctx)
-	--timer = iojx.timer.create(iojx.current_context())
-	--iojx.timer.setimeout(timer)
-	--iojx.timer.start(timer, 5, function (_timer)
-		--print('timeout')
-	--end)
---end)
-
---iojx.sock.set_read_callback(sock_client, function (ctx, data, len)
-	--iojx.timer.tick(timer)
-	--print(data)
-	--iojx.sock.write(ctx, data, len)
---end)

@@ -16,6 +16,8 @@ void ixlu_initstate(lua_State **state);
 
 void ixlu_dofile(lua_State *state, const char *path);
 
+void ixlu_add_packagepath(lua_State *state, const char *path);
+
 void ixlb_reg_interface(lua_State *state);
 
 #endif //IOJXD_LUAFOUND_HXX

@@ -10,6 +10,8 @@
 #ifndef IOJXD_UTIL_HXX
 #define IOJXD_UTIL_HXX
 
+#include <string>
+
 struct ixut_cycqueue {
     void *data;
     ixut_cycqueue *next;
@@ -26,5 +28,7 @@ void *ixut_cycqueue_dequeue(ixut_cycqueue *entry);
 void *ixut_cycqueue_front(ixut_cycqueue *entry);
 
 int ixut_cycqueue_empty(ixut_cycqueue *entry);
+
+std::string directory_name(const std::string& src, char slash = '/');
 
 #endif //IOJXD_UTIL_HXX

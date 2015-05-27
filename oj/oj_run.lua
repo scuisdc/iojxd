@@ -1,4 +1,3 @@
-
 laoj = require 'laoj'
 
 laoj.fork(nil, 'clang', 'A-c.c', '-o', 'A-c', function (status)

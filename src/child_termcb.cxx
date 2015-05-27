@@ -20,6 +20,23 @@
 
 void ixcb_child_terminated_ev(EV_P_ struct ev_child *w, int revents);
 
+void ixut_spawn_process(const char *file, char * const argv[], ixc_termcb_t cb, void *args) {
+    pid_t pid = fork();
+
+    switch (pid) {
+        case -1:
+            printf("%s: fork failed.", __func__);
+            break;
+        case 0:
+            execvp(file, argv);
+            ASSERT_FOUNDATION();
+            break;
+        default:
+            ixc_add_termcb(pid, cb, args);
+            break;
+    }
+}
+
 void ixc_enable_termcb(ixc_context *ctx) {
     assert(ctx->evl != NULL);
 }

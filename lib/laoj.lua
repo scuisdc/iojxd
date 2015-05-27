@@ -34,4 +34,10 @@ laoj.fork = function (prerun, program, ...)
 
 end
 
+laoj.syscall_name = iojx.platform.syscall_name
+
+laoj.WIFEXITED = iojx.util.WIFEXITED
+laoj.WEXITSTATUS = iojx.util.WEXITSTATUS
+laoj.WTERMSIG = iojx.util.WTERMSIG
+
 return laoj

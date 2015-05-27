@@ -10,11 +10,12 @@
 #include "luafound.hxx"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "lua_inc.hxx"
 #include "common.hxx"
+#include "util.hxx"
 #include "child_termcb.hxx"
-#include "foundation.hxx"
 #include "lbext.hxx"
 
 #include "debug.hxx"
@@ -22,24 +23,44 @@
 #include "timer.hxx"
 #include "childprocess.hxx"
 #include "sandbox.hxx"
+#include "platformed.hxx"
 
 #include <unistd.h>
 
 #include <ev++.h>
 
-// using namespace luabridge;
 using luabridge::LuaRef;
 
 void ixlu_initstate(lua_State **state) {
     *state = luaL_newstate();
     assert((*state) != NULL);
     luaL_openlibs(*state);
+
+    std::string libs_path = directory_name(ixut_execpath());
+    libs_path += "/lib";
+    ixlu_add_packagepath(*state, libs_path.c_str());
 }
 
 void ixlu_dofile(lua_State *state, const char *path) {
     if (luaL_dofile(state, path)) {
-        printf("error in script!\n");
+        printf("error in script: %s\n", lua_tostring(state, 1));
     }
+}
+
+void ixlu_add_packagepath(lua_State *state, const char *path) {
+    printf("Adding package path %s\n", path);
+
+    lua_getglobal(state, "package");
+    lua_getfield(state, -1, "path");
+
+    std::string cur_path = lua_tostring(state, -1);
+    std::string path_append = ';' + std::string(path) + "/?.lua";
+    cur_path += path_append;
+
+    lua_pop(state, 1);
+    lua_pushstring(state, cur_path.c_str());
+    lua_setfield(state, -2, "path");
+    lua_pop(state, 1);
 }
 
 ixc_context *ixlb_get_cur_ctx(lua_State *state) {
@@ -192,6 +213,15 @@ FILE *ixlb_get_stderr() { return stderr; }
 int ixlb_fflush(FILE *stream) {
     return fflush(stream); }
 
+int ixlb_wexitstatus(int status) {
+    return WEXITSTATUS(status); }
+
+int ixlb_wtermsig(int status) {
+    return WTERMSIG(status); }
+
+bool ixlb_wifexited(int status) {
+    return WIFEXITED(status); }
+
 int ixlu_resume(lua_State *L) {
     int v = lua_gettop(L);
     lua_State *Lco = (lua_State *) lua_touserdata(L, 1);
@@ -259,6 +289,9 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("stderr", &ixlb_get_stderr).
                 addFunction("stdout", &ixlb_get_stdout).
                 addFunction("fflush", &ixlb_fflush).
+                addFunction("WEXITSTATUS", &ixlb_wexitstatus).
+                addFunction("WTERMSIG", &ixlb_wtermsig).
+                addFunction("WIFEXITED", &ixlb_wifexited).
             endNamespace().
             beginNamespace("child_process").
                 beginClass<ixut_child_watcher>("watcher").endClass().
@@ -279,6 +312,10 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("reslimit_d", &ixut_reslimit_d).
                 addFunction("setuid", &ixut_setuid).
                 addFunction("setgid", &ixut_setgid).
+            endNamespace().
+            beginNamespace("platform").
+                addFunction("execpath", &ixut_execpath).
+                addFunction("syscall_name", &ixut_syscall_name).
             endNamespace().
             beginNamespace("co").
                 addFunction("spawn_process", &ixlb_spawn_process_co).

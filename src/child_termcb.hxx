@@ -21,6 +21,10 @@ struct ixc_termcb_args;
 
 typedef void (*ixc_termcb_t)(struct ixc_termcb_args *);
 
+typedef void (*ixc_void_callback)();
+
+void ixut_spawn_process(const char *file, char * const argv[], ixc_termcb_t cb, void *args);
+
 struct ixc_termcb_args {
     void *data;
     ixc_termcb_t cb;

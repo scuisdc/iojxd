@@ -18,17 +18,16 @@ if (BUILDEBUG)
 endif()
 
 add_executable(iojxd src/iojxd.cxx src/child_termcb.hxx src/child_termcb.cxx
-    src/luafound.cxx src/luafound.hxx src/foundation.cxx src/foundation.hxx
+    src/luafound.cxx src/luafound.hxx
     src/util.hxx src/debug.hxx src/context.hxx src/common.hxx src/context.cxx
     src/lbext.hxx src/util.cxx src/sock.cxx src/sock.hxx src/lua_inc.hxx
     src/timer.cxx src/timer.hxx src/childprocess.hxx src/childprocess.cxx
-    src/luafoundx.cxx src/luafoundx.hxx src/sandbox.cxx src/sandbox.hxx)
+    src/luafoundx.cxx src/luafoundx.hxx src/sandbox.cxx src/sandbox.hxx src/losyscall.cxx src/platform.hxx src/platformed.cxx src/platformed.hxx)
 
 target_link_libraries(iojxd luajit-5.1)
 target_link_libraries(iojxd ev)
 
 include_directories(SYSTEM ./src)
 
-add_executable(iojxd_test src/util.cxx test/test_cycqueue.cxx)
-add_executable(testrlimit test/test_reslimit.cxx)
-add_executable(testloop test/looptest.cxx)
+add_subdirectory(test)
+

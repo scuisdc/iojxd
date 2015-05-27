@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <string>
+
 ixut_cycqueue *ixut_cycqueue_create() {
     ixut_cycqueue *entry = (ixut_cycqueue *) malloc(sizeof(*entry));
     ixut_cycqueue *place_holder = (ixut_cycqueue *) malloc(sizeof(*place_holder));
@@ -79,4 +81,12 @@ int ixut_cycqueue_empty(ixut_cycqueue *entry) {
     assert(entry->next != NULL);
 
     return (entry->next == entry->next->next);
+}
+
+// stackoverflow.com/questions/8518743/get-directory-from-file-path-c
+std::string directory_name(const std::string& src, char slash) {
+    size_t last_slash_idx = src.rfind(slash);
+    if (last_slash_idx != std::string::npos)
+        return src.substr(0, last_slash_idx);
+    return src;
 }

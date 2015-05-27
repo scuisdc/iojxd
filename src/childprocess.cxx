@@ -14,6 +14,8 @@
 
 #include <ev++.h>
 
+#include <sys/wait.h>
+
 #include "debug.hxx"
 #include "common.hxx"
 
@@ -44,6 +46,7 @@ void ixut_childw_cb(struct ev_loop *loop, ev_child *w, int revent) {
     assert(((ixut_child_watcher *) w->data)->event == w);
 
     ixut_child_watcher *childw = (ixut_child_watcher *) w->data;
+
     ev_child_stop(loop, w);
     if (childw->cb != NULL) {
         (*childw->cb)(childw, childw->data); }
