@@ -38,7 +38,7 @@ void ixut_timer_free(ixut_timer *timer) {
     assert(timer->_timer != NULL);
     assert(!timer->active);
 
-    free(timer->_timer);
+    //free(timer->_timer);
     free(timer);
 }
 

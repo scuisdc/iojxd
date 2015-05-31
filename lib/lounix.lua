@@ -22,6 +22,8 @@ ffi.cdef[[
 	int execve(const char *file, char * const *, char * const *);
 	int execvp(const char *file, char * const argv[]);
 
+	unsigned int sleep(unsigned int interval);
+
 ]]
 
 return lounix

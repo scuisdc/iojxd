@@ -32,7 +32,7 @@ struct user_regs_struct {
 	unsigned long long int ds;
 	unsigned long long int es;
 	unsigned long long int fs;
-	unsigned long long int gd;
+	unsigned long long int gs;
 };
 
 long int ptrace(int request, pid_t pid, void *addr, void *data);

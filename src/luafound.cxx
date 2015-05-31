@@ -125,6 +125,7 @@ void ixlb_sock_connect(struct ixfd_sock *sock, const char *ip, unsigned short po
 
 struct ixlb_sock_data {
     LuaRef *cb_read;
+    LuaRef *cb_write;
 };
 
 ixfd_sock *ixlb_sock_create(struct ixc_context *ctx) {
@@ -185,8 +186,12 @@ pid_t ixlb_getpid() {
 
 void ixlb_init_loop(lua_State *L) {
     ev_loop_fork(EV_DEFAULT);
+    ev_loop_destroy(ev_default_loop(0));
     ixlb_get_cur_ctx(L)->evl = ev_default_loop(0);
 }
+
+void ixlb_run(lua_State *L) {
+    ev_run(ixlb_get_cur_ctx(L)->evl, 0); }
 
 int ixlb_exec(lua_State *L) {
     int l = lua_gettop(L);
@@ -221,6 +226,9 @@ int ixlb_wtermsig(int status) {
 
 bool ixlb_wifexited(int status) {
     return WIFEXITED(status); }
+
+bool ixlb_wifsignaled(int status) {
+    return WIFSIGNALED(status); }
 
 int ixlu_resume(lua_State *L) {
     int v = lua_gettop(L);
@@ -283,6 +291,7 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("fork", &ixlb_fork).
                 addFunction("getpid", &ixlb_getpid).
                 addFunction("init_loop", &ixlb_init_loop).
+                addFunction("run", &ixlb_run).
                 addCFunction("exec", &ixlb_exec).
                 addFunction("freopen", &ixlb_freopen).
                 addFunction("stdin", &ixlb_get_stdin).
@@ -292,6 +301,7 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("WEXITSTATUS", &ixlb_wexitstatus).
                 addFunction("WTERMSIG", &ixlb_wtermsig).
                 addFunction("WIFEXITED", &ixlb_wifexited).
+                addFunction("WIFSIGNALED", &ixlb_wifsignaled).
             endNamespace().
             beginNamespace("child_process").
                 beginClass<ixut_child_watcher>("watcher").endClass().

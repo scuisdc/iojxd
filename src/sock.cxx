@@ -50,7 +50,8 @@ struct ixfd_sock *ixfd_commonsock_create(ixc_context *ctx) {
     sock->type = IXFD_SOCK_UNKNOWN;
     sock->connected = sock->active = sock->listening = false;
     sock->passive_read = false;
-    sock->cb_read = NULL; // sock->cb_close = NULL;
+    sock->cb_read = NULL; sock->cb_close = NULL;
+    sock->cb_accept = NULL;
     sock->default_ctx = NULL;
 
     sock->event_accept = sock->event_connect = NULL;
@@ -59,14 +60,6 @@ struct ixfd_sock *ixfd_commonsock_create(ixc_context *ctx) {
     sock->context = ctx;
 
     return sock;
-}
-
-void ixfd_commonsock_free(struct ixfd_sock *sock) {
-    assert(sock != NULL);
-    assert(!sock->active);
-
-    free(sock->event_accept);
-    free(sock);
 }
 
 void ixfd_commonsock_tcp_createnbind(ixfd_sock *sock, const char *ip, unsigned short port) {
@@ -86,6 +79,9 @@ void ixfd_commonsock_tcp_createnbind(ixfd_sock *sock, const char *ip, unsigned s
     sin.sin_addr.s_addr = inet_addr(ip);
     sin.sin_port = htons(port);
 
+    int addr_reuse = 1;
+    if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, &addr_reuse, sizeof(addr_reuse)) == -1) {
+        printf("setsockopt failed\n"); }
     if (bind(sock->fd, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
         printf("ixfd_commonsocket_tcp_createnbind: failed when binding to %s:%u", ip, port);
         return;
@@ -209,8 +205,55 @@ struct ixfd_conn_ctx *ixfd_commonsock_create_ctx(ixfd_sock *sock, int fd) {
 
     ctx->buf_read = NULL; ixfd_commonsock_set_bufread_len(ctx, 4096);
     ctx->buf_write = ixut_cycqueue_create();
+    ctx->active = false;
 
     return ctx;
+}
+
+void ixfd_commonsock_close(struct ixfd_conn_ctx *ctx) {
+    assert(ctx != NULL);
+
+    ctx->active = false;
+    ev_io_stop(ctx->sock->context->evl, ctx->event_read);
+
+    close(ctx->fd);
+}
+
+void ixfd_commonsock_freectx(struct ixfd_conn_ctx *ctx) {
+    assert(ctx != NULL);
+
+    free(ctx->event_read);
+    free(ctx->event_write);
+    free(ctx->buf_read);
+    ixut_cycqueue_free(ctx->buf_write);
+    free(ctx);
+}
+
+void ixfd_commonsock_unbind(struct ixfd_sock *sock) {
+    assert(sock != NULL);
+
+    if (sock->event_accept != NULL) {
+        ev_io_stop(sock->context->evl, sock->event_accept); }
+    close(sock->fd);
+}
+
+void ixfd_commonsock_disconnect(struct ixfd_sock *sock) {
+    assert(sock != NULL);
+
+    if (sock->default_ctx->active)
+        ixfd_commonsock_close(sock->default_ctx);
+    close(sock->fd);
+}
+
+void ixfd_commonsock_free(struct ixfd_sock *sock) {
+    assert(sock != NULL);
+    assert(sock->event_accept || sock->event_connect);
+
+    if (sock->default_ctx)
+        ixfd_commonsock_freectx(sock->default_ctx);
+    free(sock->event_accept);
+    free(sock->event_connect);
+    free(sock);
 }
 
 void ixfd_commonsock_accept_cb(struct ev_loop *loop, ev_io *w_, int revents) {
@@ -223,7 +266,10 @@ void ixfd_commonsock_accept_cb(struct ev_loop *loop, ev_io *w_, int revents) {
 
     struct ixfd_conn_ctx *ctx = ixfd_commonsock_create_ctx((ixfd_sock *) w_->data, fd);
 
+    if (ctx->sock->cb_accept != NULL)
+        ctx->sock->cb_accept(ctx, ctx->sock->data);
     ev_io_start(loop, ctx->event_read);
+    ctx->active = true;
     // ev_io_start(loop, io_write);
 }
 
@@ -246,6 +292,7 @@ void ixfd_commonsock_connect_cb(struct ev_loop *loop, ev_io *w_, int revents) {
         } else {
             sock->default_ctx = ixfd_commonsock_create_ctx(sock, sock->fd);
             sock->type = IXFD_SOCK_TCP;
+            sock->default_ctx->active = true;
 
             ev_io_start(loop, sock->default_ctx->event_read);
             if (args->cb_conn) {
@@ -273,18 +320,11 @@ void ixfd_commonsock_read_cb(struct ev_loop *loop, ev_io *w_, int revents) {
         } else if (n < 0) {
 
         } else {
-            ev_io_stop(loop, ctx->event_read);
-            free(ctx->event_read);
-            free(ctx->event_write);
 
-            close(ctx->fd);
-//        if (ctx->cb_close != NULL) {
-//            ctx->cb_close(); }
+            if (ctx->sock->cb_close != NULL)
+                ctx->sock->cb_close(ctx, NULL);
 
-            free(ctx->buf_read);
-            ixut_cycqueue_free(ctx->buf_write);
-
-            free(ctx);
+            ixfd_commonsock_close(ctx);
         }
     } else {
         ctx->cb_read(ctx, NULL, 0);
@@ -301,17 +341,8 @@ int ixfd_commonsock_read(struct ixfd_conn_ctx *ctx, char *buf, size_t len) {
     } else if (n < 0) {
         return -1;
     } else {
-        ev_io_stop(ctx->sock->context->evl, ctx->event_read);
-        free(ctx->event_read); free(ctx->event_write);
-
-        close(ctx->fd);
-//        if (ctx->cb_close != NULL) {
-//            ctx->cb_close(); }
-
-        free(ctx->buf_read);
-        ixut_cycqueue_free(ctx->buf_write);
-
-        free(ctx);
+        ixfd_commonsock_close(ctx);
+        return 0;
     }
 }
 

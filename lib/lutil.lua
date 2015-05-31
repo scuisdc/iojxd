@@ -1,5 +1,7 @@
 local lutil = { }
 
+local lfs = require 'lfs'
+
 local inside = function (array, element, cmp)
 	if cmp == nil then cmp = function (x, y) return x == y end end
 	for i, v in ipairs(array) do
@@ -34,6 +36,17 @@ lutil.wait4 = function (pid)
 	local status = ffi.new('int[1]')
 	local ret = ffi.C.wait4(pid, status, 0, rusage)
 	return ret, tonumber(status[0]), rusage
+end
+
+-- too simple
+lutil.count_files = function (dir)
+	local ret = 0
+	for file in lfs.dir(dir) do
+		if file ~= '.' and file ~= '..' then
+			ret = ret + 1
+		end
+	end
+	return ret
 end
 
 return lutil

@@ -35,12 +35,14 @@ struct ixfd_sock {
     ev_io *event_connect;
 
     ixfd_data_read_callback cb_read;
-    // ixc_void_callback cb_close;
+    ixfd_context_callback cb_accept;
+    ixfd_context_callback cb_close;
 
     ixfd_socktype type;
     bool active;
     bool connected;
     bool listening;
+
     bool passive_read;
 
     ixc_context *context;
@@ -60,9 +62,10 @@ struct ixfd_conn_ctx {
     char *buf_read;
 
     ixfd_data_read_callback cb_read;
-    // ixc_void_callback cb_close;
 
+    bool active;
     bool write_launched;
+    void *data;
 };
 
 struct ixfd_sock_write_ctx {
@@ -74,8 +77,6 @@ struct ixfd_sock_write_ctx {
 };
 
 struct ixfd_sock *ixfd_commonsock_create(struct ixc_context *ctx);
-
-void ixfd_commonsock_free(struct ixfd_sock *sock);
 
 void ixfd_commonsock_tcp_createnbind(struct ixfd_sock *sock, const char *ip, unsigned short port);
 
@@ -89,7 +90,15 @@ bool ixfd_commonsock_write(struct ixfd_conn_ctx *ctx, const char *data, size_t l
 
 void ixfd_commonsock_set_bufread_len(struct ixfd_conn_ctx *conn, size_t len);
 
+void ixfd_commonsock_free(struct ixfd_sock *sock);
+
+void ixfd_commonsock_unbind(struct ixfd_sock *sock);
+
+void ixfd_commonsock_disconnect(struct ixfd_sock *sock);
+
 void ixfd_commonsock_close(struct ixfd_conn_ctx *ctx);
+
+void ixfd_commonsock_freectx(struct ixfd_conn_ctx *ctx);
 
 int ixfd_commonsock_read(struct ixfd_conn_ctx *ctx, char *buf, size_t len);
 

@@ -25,7 +25,7 @@ ixc_context *ixc_create_context() {
     ixlb_reg_interface(r->state);
     ixlbx_reg_interface(r->state);
 
-    r->evl = ev_default_loop(0);
+    r->evl = ev_default_loop(EVFLAG_FORKCHECK);
 
     lua_pushstring(r->state, "_context");
     lua_pushlightuserdata(r->state, (void *) r);
@@ -39,6 +39,7 @@ void ixc_destroy_context(ixc_context *ctx) {
     assert(ctx->state != NULL);
     assert(ctx->evl != NULL);
 
+    lua_gc(ctx->state, LUA_GCCOLLECT, 0);
     lua_close(ctx->state);
     ev_loop_destroy(ctx->evl);
 
