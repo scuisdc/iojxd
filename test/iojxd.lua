@@ -11,29 +11,20 @@ local uuid = require 'uuid'
 
 local ffi = require 'ffi'
 
+local config_parse = require 'config_parse'
+local config = require 'config'
+
 local iojxd_init = function ()
 	uuid.randomseed(os.time())
 
-	local attr_tmp, msg = lfs.attributes('/tmp/iojxd/')
+	config = config_parse.parse(config, config_parse.defaults_conf)
+	config.tmp_path = lutil.add_slash(config.tmp_path)
+
+	local attr_tmp, msg = lfs.attributes(config.tmp_path)
 	if attr_tmp == nil then
-		lfs.mkdir('/tmp/iojxd/')
+		lfs.mkdir(config.tmp_path)
 	end
 end
-
-local example_args = {
-	source = { '/Users/secondatke/Desktop/apb.cpp' },
-	language = 1,
-	flags = '-O3 -g',
-	data = '/Users/secondatke/Desktop/in.in',
-	result = '/Users/secondatke/Desktop/out.out',
-	time = 5, -- ms
-	mem = 3, -- byte
-	outfile = '/Users/secondatke/Desktop/out.txt',
-
-	-- optional arguments
-	c = 'clang',
-	cxx = '/usr/bin/clang++',
-}
 
 function delayed_gc(delay)
 	if delay == nil then delay = 2 end
@@ -54,10 +45,12 @@ end
 
 function judge(args)
 	print('iojxd - received judge command ..')
+	args = config_parse.parse(args, config_parse.defaults_args)
+
 	local session_uuid = uuid()
 	print('iojxd - session uuid ' .. session_uuid)
 
-	local session_dir = '/tmp/iojxd/' .. session_uuid .. '/'
+	local session_dir = config.tmp_path .. session_uuid .. '/'
 	local compiler_logpath = session_dir .. 'compiler.log'
 	local execpath = session_dir .. 'a.out'
 	local outputpath = session_dir .. 'tmp.out'
@@ -117,16 +110,23 @@ function judge(args)
 										if lfs.attributes(diffpath).size == 0 then
 											write_status(args, 'AC', time_ms, mem)
 										else write_status(args, 'WA', time_ms, mem) end
+
+										-- that's a bug, it cannot exit from event loop
+										-- automatically (maybe there are other watchers alive)
+										-- so we need to 'break' explicitly
+										--
+										-- maybe we need a global watcher list ...
+										iojx.util.break_loop(iojx.current_context())
 									end)
 								iojx.util.run()
 								break
 							elseif laoj.WIFSIGNALED(status_final) then
 								print(status_final, exitstatus, termsig)
-								if termsig == 11 then -- SIGSEGV, a common kind of Runtime Error
+								if termsig == lounix.SIGSEGV then -- a common kind of Runtime Error
 									write_status(args, 'RE', time_ms, mem)
 									break
 								end
-								if termsig == 27 then -- SIGPROF, triggered by setitimer, a TLE
+								if termsig == lounix.SIGPROF then -- triggered by setitimer, a TLE
 									write_status(args, 'TLE', time_ms, mem)
 								end
 								break
@@ -148,7 +148,7 @@ function execute_cmd(cmd, ctx)
 	if cmd == 'AUTH' then
 		ctx:write('1')
 		ctx.data = { authed = true, context = {
-					execute = judge, example_args = example_args }
+					execute = judge }
 		}
 	end
 end
