@@ -2,13 +2,23 @@
 local lutil = require 'lutil'
 local lcaster = require 'lcaster'
 
-local lo = require 'lodarwin'
+local lo = require 'lo'
 local lounix = require 'lounix'
 local laoj = require 'laoj'
 
 local lfs = require 'lfs'
+local uuid = require 'uuid'
 
 local ffi = require 'ffi'
+
+local iojxd_init = function ()
+	uuid.randomseed(os.time())
+
+	local attr_tmp, msg = lfs.attributes('/tmp/iojxd/')
+	if attr_tmp == nil then
+		lfs.mkdir('/tmp/iojxd/')
+	end
+end
 
 local example_args = {
 	source = { '/Users/secondatke/Desktop/apb.cpp' },
@@ -34,7 +44,7 @@ function delayed_gc(delay)
 end
 
 function write_status(args, status, time, mem, log)
-	local out = io.open(args.outfile, 'a')
+	local out = io.open(args.outfile, 'w')
 	print('writing to ' .. status)
 	out:write(tostring(lcaster.status[status]) .. '\n')
 	out:write(tostring(time) .. ' ' .. tostring(mem) .. '\n')
@@ -44,31 +54,40 @@ end
 
 function judge(args)
 	print('iojxd - received judge command ..')
+	local session_uuid = uuid()
+	print('iojxd - session uuid ' .. session_uuid)
+
+	local session_dir = '/tmp/iojxd/' .. session_uuid .. '/'
+	local compiler_logpath = session_dir .. 'compiler.log'
+	local execpath = session_dir .. 'a.out'
+	local outputpath = session_dir .. 'tmp.out'
+	local diffpath = session_dir .. 'diff.diff'
+	lfs.mkdir(session_dir)
 
 	if lcaster.needscompile[args.language] then
-		local compiler = args[lcaster.compiler_tag[args.language]]
+		local compiler = 'g++' -- args[lcaster.compiler_tag[args.language]]
 		print(compiler, args.source[1])
 		local pid_compiler = iojxx.fork(function ()
-			iojx.util.freopen("compiler.log", "w", iojx.util.stderr())
+			iojx.util.freopen(compiler_logpath, "w", iojx.util.stderr())
 
-			iojx.util.exec(compiler, unpack(args.source))
+			iojx.util.exec(compiler, unpack(args.source), '-o', execpath)
 		end).pid
 		iojxx.child_watcher(iojx.current_context(), function (watcher)
 			local status = watcher:get_status()
 			if status.status ~= 0 then
 
-				local log = io.open("compiler.log", 'r')
+				local log = io.open(compiler_logpath, 'r')
 				local log_content = log:read("*all")
 				log:close()
 				write_status(args, 'CE', 0, 0, log_content)
-				
+
 			else
 
 				local pid_d = iojxx.fork(function ()
 					local pid_in = ffi.C.fork()
 					if pid_in == 0 then
 						iojx.util.freopen(args.data, 'r', iojx.util.stdin())
-						iojx.util.freopen('tmp.out', 'w', iojx.util.stdout())
+						iojx.util.freopen(outputpath, 'w', iojx.util.stdout())
 
 						local val = ffi.new('struct itimerval')
 						val.it_interval.tv_sec, val.it_interval.tv_usec = 0, 0
@@ -79,8 +98,8 @@ function judge(args)
 						-- iojx.sandbox.reslimit(lo.RLIMIT_AS, args.mem)
 						-- iojx.sandbox.reslimit(lo.RLIMIT_DATA, args.mem)
 						-- iojx.sandbox.reslimit(lo.RLIMIT_RSS, args.mem)
-						
-						iojx.util.exec('./a.out')
+
+						iojx.util.exec(execpath)
 					else
 						while true do
 							local ret, status_final, rusage = lutil.wait4(pid_in)
@@ -93,9 +112,9 @@ function judge(args)
 								iojx.util.init_loop()
 								print(status_final, exitstatus, termsig)
 								laoj.fork(function ()
-										iojx.util.freopen('diff.diff', 'w', iojx.util.stdout())
-									end, 'diff', 'tmp.out', args.result, function (status)
-										if lfs.attributes('diff.diff').size == 0 then
+										iojx.util.freopen(diffpath, 'w', iojx.util.stdout())
+									end, 'diff', outputpath, args.result, function (status)
+										if lfs.attributes(diffpath).size == 0 then
 											write_status(args, 'AC', time_ms, mem)
 										else write_status(args, 'WA', time_ms, mem) end
 									end)
@@ -134,14 +153,14 @@ function execute_cmd(cmd, ctx)
 	end
 end
 
+iojxd_init()
+
 iojxx.ixlbx_tcp_base(iojx.current_context()):
 on_accept(function ()
 	print('iojxd - accepting connection ...')
-
 end):on_close(function (ctx)
 	print('iojxd - closing connection ...')
 	delayed_gc()
-
 end):on_read(function (ctx, data, len)
 	print('iojxd - received ', data)
 
@@ -165,7 +184,6 @@ end):on_read(function (ctx, data, len)
 		else
 			ctx:write('0\nyou are not authed.')
 			ctx:close()
-			delayed_gc()
 		end
 	end
 
