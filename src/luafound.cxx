@@ -37,6 +37,7 @@ void ixlu_initstate(lua_State **state) {
     luaL_openlibs(*state);
 
     std::string libs_path = directory_name(ixut_execpath());
+    ixlu_add_packagepath(*state, libs_path.c_str());
     libs_path += "/lib";
     ixlu_add_packagepath(*state, libs_path.c_str());
 }
@@ -185,13 +186,18 @@ pid_t ixlb_getpid() {
     return getpid(); }
 
 void ixlb_init_loop(lua_State *L) {
+    ev_loop_destroy(ev_default_loop(0));
     ev_loop_fork(EV_DEFAULT);
     ev_loop_destroy(ev_default_loop(0));
     ixlb_get_cur_ctx(L)->evl = ev_default_loop(0);
+    ev_loop_fork(EV_DEFAULT);
 }
 
 void ixlb_run(lua_State *L) {
     ev_run(ixlb_get_cur_ctx(L)->evl, 0); }
+
+void ixlb_break_loop(ixc_context *ctx) {
+    ev_break(ctx->evl, EVBREAK_ONE); }
 
 int ixlb_exec(lua_State *L) {
     int l = lua_gettop(L);
@@ -229,6 +235,12 @@ bool ixlb_wifexited(int status) {
 
 bool ixlb_wifsignaled(int status) {
     return WIFSIGNALED(status); }
+
+bool ixlb_wifstopped(int status) {
+    return WIFSTOPPED(status); }
+
+int ixlb_wstopsig(int status) {
+    return WSTOPSIG(status); }
 
 int ixlu_resume(lua_State *L) {
     int v = lua_gettop(L);
@@ -292,6 +304,7 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("getpid", &ixlb_getpid).
                 addFunction("init_loop", &ixlb_init_loop).
                 addFunction("run", &ixlb_run).
+                addFunction("break_loop", &ixlb_break_loop).
                 addCFunction("exec", &ixlb_exec).
                 addFunction("freopen", &ixlb_freopen).
                 addFunction("stdin", &ixlb_get_stdin).
@@ -302,6 +315,8 @@ void ixlb_reg_interface(lua_State *state) {
                 addFunction("WTERMSIG", &ixlb_wtermsig).
                 addFunction("WIFEXITED", &ixlb_wifexited).
                 addFunction("WIFSIGNALED", &ixlb_wifsignaled).
+                addFunction("WIFSTOPPED", &ixlb_wifstopped).
+                addFunction("WSTOPSIG", &ixlb_wstopsig).
             endNamespace().
             beginNamespace("child_process").
                 beginClass<ixut_child_watcher>("watcher").endClass().

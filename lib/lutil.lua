@@ -15,11 +15,20 @@ end
 local rusage_time = function (rusage)
 	local sec = tonumber(rusage.ru_utime.tv_sec) + tonumber(rusage.ru_stime.tv_sec)
 	local usec = tonumber(rusage.ru_utime.tv_usec) + tonumber(rusage.ru_stime.tv_usec)
+	-- print(sec, usec)
 	return (sec + usec / 1000000.0)
+end
+
+local add_slash = function (src)
+	if string.sub(src, #src, #src) ~= '/' then
+		src = src .. '/'
+	end
+	return src
 end
 
 lutil.inside = inside
 lutil.rusage_time = rusage_time
+lutil.add_slash = add_slash
 
 local ffi = require 'ffi'
 

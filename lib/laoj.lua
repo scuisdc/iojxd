@@ -40,5 +40,7 @@ laoj.WIFEXITED = iojx.util.WIFEXITED
 laoj.WEXITSTATUS = iojx.util.WEXITSTATUS
 laoj.WTERMSIG = iojx.util.WTERMSIG
 laoj.WIFSIGNALED = iojx.util.WIFSIGNALED
+laoj.WIFSTOPPED = iojx.util.WIFSTOPPED
+laoj.WSTOPSIG = iojx.util.WSTOPSIG
 
 return laoj

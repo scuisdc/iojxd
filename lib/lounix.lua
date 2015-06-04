@@ -26,4 +26,7 @@ ffi.cdef[[
 
 ]]
 
+lounix.SIGSEGV = 11
+lounix.SIGPROF = 27
+
 return lounix

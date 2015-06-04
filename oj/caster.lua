@@ -17,6 +17,13 @@ lcaster.compiler_tag = {
 	[languages.CXX] = 'cxx'
 }
 
+lcaster.syscall_whitelist = {
+	[languages.C] = { 'read', 'write', 'mmap', 'mprotect', 'munmap', 'exit_group', 'open', 'close',
+	'arch_prctl', 'fstat', 'access', 'brk' },
+	[languages.CXX] = { 'read', 'write', 'mmap', 'mprotect', 'munmap', 'exit_group', 'open', 'close',
+	'arch_prctl', 'fstat', 'access', 'brk' }
+}
+
 -- AC, TLE, RE, CE, WA, MLE
 lcaster.status_code = {
 	[0] = 'UNKNOWN',
@@ -32,10 +39,5 @@ lcaster.status = { }
 for i, v in pairs(lcaster.status_code) do
 	lcaster.status[v] = i
 end
-
-lcaster.syscall_whitelist_cfamily = {
-	'read', 'write', 'mmap', 'mprotect', 'munmap', 'exit_group', 'open', 'close',
-	'arch_prctl', 'fstat', 'access', 'brk'
-}
 
 return lcaster
