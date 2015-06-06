@@ -30,6 +30,7 @@ ffi.cdef[[
 
 ]]
 
+lounix.SIGKILL = 9
 lounix.SIGSEGV = 11
 lounix.SIGPROF = 27
 

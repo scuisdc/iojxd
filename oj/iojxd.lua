@@ -102,10 +102,16 @@ function judge(args)
 						iojx.util.freopen(outputpath, 'w', iojx.util.stdout())
 
 						if lplatform.is_linux() then
-							print('setting uid')
-							ffi.C.setuid(args.sbuid)
-							print('setting gid')
-							ffi.C.setgid(args.sbgid)
+							-- print('setting uid')
+							-- ffi.C.setuid(args.sbuid)
+							-- print('setting gid')
+							-- ffi.C.setgid(args.sbgid)
+
+							-- for stdin, stdout, stderr
+							-- but programs do not always keep these descs
+							-- they can be closed, so it makes almose no difference
+							iojx.sandbox.reslimit(lo.RLIMIT_NOFILE, 4)
+							-- iojx.sandbox.reslimit(lo.RLIMIT_AS, tonumber(args.mem))
 							lutil.ptrace(ptrace.PTRACE_TRACEME, 0)
 						end
 
@@ -114,10 +120,6 @@ function judge(args)
 						-- we just passed raw time here
 						val.it_value.tv_sec, val.it_value.tv_usec = u0, u1
 						ffi.C.setitimer(lo.ITIMER_PROF, val, nil)
-
-						-- iojx.sandbox.reslimit(lo.RLIMIT_AS, args.mem)
-						-- iojx.sandbox.reslimit(lo.RLIMIT_DATA, args.mem)
-						-- iojx.sandbox.reslimit(lo.RLIMIT_RSS, args.mem)
 
 						iojx.util.exec(execpath)
 					else
@@ -159,6 +161,9 @@ function judge(args)
 								end
 								if termsig == lounix.SIGPROF then -- triggered by setitimer, a TLE
 									write_status(args, 'TLE', time_ms, mem)
+								end
+								if termsig == lounix.SIGKILL then -- MLE, setrlimit RLIMIT_AS
+									write_status(args, 'MLE', time_ms, mem)
 								end
 								break
 							elseif laoj.WIFSTOPPED(status_final) then

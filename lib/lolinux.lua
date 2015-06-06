@@ -41,11 +41,13 @@ lolinux.ITIMER_REAL = 0
 lolinux.ITIMER_VIRTUAL = 1
 lolinux.ITIMER_PROF = 2
 
+-- /usr/include/bits/resource.h
 lolinux.RLIMIT_CPU = 0
 lolinux.RLIMIT_FSIZE = 1
 lolinux.RLIMIT_DATA = 2
 lolinux.RLIMIT_STACK = 3
 lolinux.RLIMIT_CORE = 4
+lolinux.RLIMIT_NOFILE = 7
 lolinux.RLIMIT_AS = 9
 lolinux.RLIMIT_RTTIME = 15
 
