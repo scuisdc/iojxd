@@ -7,6 +7,8 @@ ffi.cdef[[
 	typedef long time_t;
 	typedef int suseconds_t;
 	typedef int pid_t;
+	typedef unsigned int uid_t;
+	typedef unsigned int gid_t;
 
 	struct timeval {
 		time_t tv_sec;	        /* seconds */

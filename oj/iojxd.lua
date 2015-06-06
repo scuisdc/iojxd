@@ -102,6 +102,10 @@ function judge(args)
 						iojx.util.freopen(outputpath, 'w', iojx.util.stdout())
 
 						if lplatform.is_linux() then
+							print('setting uid')
+							ffi.C.setuid(args.sbuid)
+							print('setting gid')
+							ffi.C.setgid(args.sbgid)
 							lutil.ptrace(ptrace.PTRACE_TRACEME, 0)
 						end
 

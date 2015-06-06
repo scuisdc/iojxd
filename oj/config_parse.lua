@@ -24,7 +24,9 @@ defaults_args = {
 	-- optional arguments
 	c = 'clang',
 	cxx = '/usr/bin/clang++',
-	syscall_whitelist = nil
+	syscall_whitelist = nil,
+	sbuid = 2048,
+	sbgid = 2048
 }
 
 else
@@ -42,7 +44,9 @@ defaults_args = {
 	-- optional arguments
 	c = '/usr/bin/gcc',
 	cxx = '/usr/bin/g++',
-	syscall_whitelist = nil
+	syscall_whitelist = nil,
+	sbuid = 2048,
+	sbgid = 2048
 }
 
 end

@@ -24,6 +24,10 @@ ffi.cdef[[
 
 	unsigned int sleep(unsigned int interval);
 
+	int	setgid(gid_t);
+	int	setpgid(pid_t, pid_t);
+	int	setuid(uid_t);
+
 ]]
 
 lounix.SIGSEGV = 11
