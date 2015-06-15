@@ -22,11 +22,19 @@ defaults_args = {
 	outfile = '/Users/secondatke/Desktop/out.txt',
 
 	-- optional arguments
-	c = 'clang',
+	c = '/usr/bin/clang',
 	cxx = '/usr/bin/clang++',
+	javac = '',
+	java = '',
+	py = '/usr/local/bin/python',
+	js = 'jsrunner',
+	lua = 'lua',
+
 	syscall_whitelist = nil,
 	sbuid = 2048,
-	sbgid = 2048
+	sbgid = 2048,
+
+	dummy = ''
 }
 
 else
@@ -44,9 +52,17 @@ defaults_args = {
 	-- optional arguments
 	c = '/usr/bin/gcc',
 	cxx = '/usr/bin/g++',
+	javac = '',
+	java = '',
+	py = '/usr/local/bin/python',
+	js = 'jsrunner',
+	lua = 'lua',
+
 	syscall_whitelist = nil,
 	sbuid = 2048,
-	sbgid = 2048
+	sbgid = 2048,
+
+	dummy = ''
 }
 
 end

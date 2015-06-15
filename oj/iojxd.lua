@@ -19,6 +19,21 @@ if lplatform.is_linux() then
 	ptrace = require 'lolinuxptrace'
 end
 
+function delayed_gc(delay)
+	if delay == nil then delay = 2 end
+	iojxx.timer(iojx.current_context(), function ()
+		print('iojxd - delayed_gc: collecting garbage')
+		collectgarbage()
+	end):start(delay)
+end
+
+function readall(filename)
+	local f = io.open(filename, 'r')
+	local ret = f:read("*all")
+	f:close()
+	return ret
+end
+
 local iojxd_init = function ()
 	uuid.randomseed(os.time())
 
@@ -29,14 +44,6 @@ local iojxd_init = function ()
 	if attr_tmp == nil then
 		lfs.mkdir(config.tmp_path)
 	end
-end
-
-function delayed_gc(delay)
-	if delay == nil then delay = 2 end
-	iojxx.timer(iojx.current_context(), function ()
-		print('iojxd - delayed_gc: collecting garbage')
-		collectgarbage()
-	end):start(delay)
 end
 
 function write_status(args, status, time, mem, log)
@@ -54,156 +61,172 @@ function write_status(args, status, time, mem, log)
 	out:close()
 end
 
-function judge(args)
-	print('iojxd - received judge command ..')
-	if args == nil then args = { } end
-	args = config_parse.parse(args, config_parse.defaults_args)
+-- run before 'exec' to client program
+-- set up stuffs like:
+--	* forced time limit
+--	* ptrace (Linux)
+--	* process STDIO
+--
+function evaluate_child_setup (args, outputpath)
+	local u0, u1 = math.floor(args.time / 1000), (args.time % 1000) * 1000
 
-	if args.syscall_whitelist == nil then
-		args.syscall_whitelist = caster.syscall_whitelist[args.language]
+	laoj.freopen(args.data, 'r', laoj.stdin())
+	laoj.freopen(outputpath, 'w', laoj.stdout())
+
+	if lplatform.is_linux() then
+		-- ffi.C.setuid(args.sbuid)
+		-- ffi.C.setgid(args.sbgid)
+
+		-- for stdin, stdout, stderr
+		-- but programs do not always keep these descs
+		-- they can be closed, so it makes almose no difference
+		-- iojx.sandbox.reslimit(lo.RLIMIT_NOFILE, 4)
+		-- iojx.sandbox.reslimit(lo.RLIMIT_AS, tonumber(args.mem))
+		lutil.ptrace(ptrace.PTRACE_TRACEME, 0)
 	end
 
+	local val = ffi.new('struct itimerval')
+	val.it_interval.tv_sec, val.it_interval.tv_usec = 0, 0
+	val.it_value.tv_sec, val.it_value.tv_usec = u0, u1 -- we just passed raw time here
+	ffi.C.setitimer(lo.ITIMER_PROF, val, nil)
+end
+
+-- forked from child process
+-- stuffs like ptrace its system call
+function evaluate_tracer(args, pid, paths)
+	-- the first syscall would be 'exec' family and we'll ignore it
+	local inited = false
+	local status = { name = nil }
+	while true do
+		local ret, status_final, rusage = lutil.wait4(pid)
+		local exitstatus, termsig = laoj.WEXITSTATUS(status_final), laoj.WTERMSIG(status_final)
+
+		local time_ms = lutil.rusage_time(rusage) * 1000
+		local mem = tonumber(rusage.ru_idrss)
+
+		if laoj.WIFEXITED(status_final) then
+			iojx.util.init_loop()
+			print(status_final, exitstatus, termsig)
+			laoj.fork(function () laoj.freopen(paths.diff, 'w', laoj.stdout()) end
+				, 'diff', paths.output, args.result, function (status)
+					if lfs.attributes(paths.diff).size == 0 then
+						write_status(args, 'AC', time_ms, mem)
+					else write_status(args, 'WA', time_ms, mem) end
+
+					-- that's a bug, it cannot exit from event loop
+					-- automatically (maybe there are other watchers alive)
+					-- so we need to 'break' explicitly
+					--
+					-- maybe we need a global watcher list ...
+					iojx.util.break_loop(iojx.current_context())
+				end)
+			iojx.util.run()
+			break
+		elseif laoj.WIFSIGNALED(status_final) then
+			print('iojxd - target program termed by signal')
+			print(status_final, exitstatus, termsig)
+			if termsig == lounix.SIGSEGV then -- a common kind of Runtime Error
+				write_status(args, 'RE', time_ms, mem)
+				break
+			end
+			if termsig == lounix.SIGPROF then -- triggered by setitimer, a TLE
+				write_status(args, 'TLE', time_ms, mem) end
+			if termsig == lounix.SIGKILL then -- MLE, setrlimit RLIMIT_AS, or ptrace
+				if status.name == 'overflow' then
+					write_status(args, 'RE', time_ms, mem, 
+						"Detected invalid system call '" .. status.syscall_name .. "'!")
+				else
+					write_status(args, 'MLE', time_ms, mem)
+				end
+			end
+			break
+		elseif laoj.WIFSTOPPED(status_final) then
+
+			termsig = laoj.WSTOPSIG(status_final)
+			if termsig == lounix.SIGPROF then
+				write_status(args, 'TLE', time_ms, mem)
+				break
+			end
+
+			local regs = ffi.new('struct user_regs_struct')
+			ffi.C.ptrace(ptrace.PTRACE_GETREGS, pid, nil, regs)
+			local syscall_name = laoj.syscall_name(tonumber(regs.orig_rax))
+			io.write(syscall_name .. ' ')
+
+			if not inited then
+				inited = true
+				lutil.ptrace(ptrace.PTRACE_SYSCALL, pid)
+			else
+				if not lutil.inside(args.syscall_whitelist, syscall_name) then
+					print('\ndetected invalid syscall ' .. tostring(tonumber(regs.orig_rax)) .. ' ' .. syscall_name)
+					status.name = 'overflow'
+					status.syscall_name = syscall_name
+					lutil.ptrace(ptrace.PTRACE_KILL, pid)
+					-- lutil.ptrace(ptrace.PTRACE_SYSCALL, pid)
+				else
+					lutil.ptrace(ptrace.PTRACE_SYSCALL, pid)
+				end
+			end
+
+		end
+	end
+end
+
+function evaluate (args, paths)
+
+	iojxx.fork(function ()
+		local pid_in = ffi.C.fork()
+		if pid_in == 0 then
+			evaluate_child_setup(args, paths.output)
+			if #args[caster.runtime_tag[args.language]] == 0 then
+				iojx.util.exec(paths.exec)
+			else
+				local execpath
+				if caster.needscompile[args.language] then
+					execpath = paths.exec
+				else execpath = args.source[1] end
+				iojx.util.exec(args[caster.runtime_tag[args.language]], execpath)
+			end
+		else evaluate_tracer(args, pid_in, paths) end
+	end)
+
+end
+
+function judge(args)
+
+	if args == nil then args = { } end
+	args = config_parse.parse(args, config_parse.defaults_args)
+	if args.syscall_whitelist == nil then
+		args.syscall_whitelist = caster.syscall_whitelist[args.language] end
+
+	-- generate session ID
 	local session_uuid = uuid()
 	print('iojxd - session uuid ' .. session_uuid)
-
+	-- URI for temp files
 	local session_dir = config.tmp_path .. session_uuid .. '/'
-	local compiler_logpath = session_dir .. 'compiler.log'
-	local execpath = session_dir .. 'a.out'
-	local outputpath = session_dir .. 'tmp.out'
-	local diffpath = session_dir .. 'diff.diff'
 	lfs.mkdir(session_dir)
+	local paths = {
+		cclog = session_dir .. 'compiler.log',
+		exec = session_dir .. 'a.out',
+		output = session_dir .. 'tmp.out',
+		diff = session_dir .. 'diff.diff'
+	}
 
 	if caster.needscompile[args.language] then
-		local compiler = 'g++' -- args[caster.compiler_tag[args.language]]
+		-- extra work to invoke a compiler
+		local compiler = args[caster.compiler_tag[args.language]]
 		print(compiler, args.source[1])
 		local pid_compiler = iojxx.fork(function ()
-			iojx.util.freopen(compiler_logpath, "w", iojx.util.stderr())
-
-			iojx.util.exec(compiler, unpack(args.source), '-o', execpath)
+			laoj.freopen(paths.cclog, "w", laoj.stderr()) -- redirect compiler to log
+			iojx.util.exec(compiler, unpack(args.source), '-o', paths.exec)
 		end).pid
 		iojxx.child_watcher(iojx.current_context(), function (watcher)
 			local status = watcher:get_status()
 			if status.status ~= 0 then
-
-				local log = io.open(compiler_logpath, 'r')
-				local log_content = log:read("*all")
-				log:close()
-				write_status(args, 'CE', 0, 0, log_content)
-
-			else
-
-				local pid_d = iojxx.fork(function ()
-					local pid_in = ffi.C.fork()
-					if pid_in == 0 then
-						local u0, u1 = math.floor(args.time / 1000), (args.time % 1000) * 1000
-						print('setting forced time limit ' .. tostring(args.time) .. ' ' .. tostring(u0) .. ' ' .. tostring(u1))
-
-						iojx.util.freopen(args.data, 'r', iojx.util.stdin())
-						iojx.util.freopen(outputpath, 'w', iojx.util.stdout())
-
-						if lplatform.is_linux() then
-							-- print('setting uid')
-							-- ffi.C.setuid(args.sbuid)
-							-- print('setting gid')
-							-- ffi.C.setgid(args.sbgid)
-
-							-- for stdin, stdout, stderr
-							-- but programs do not always keep these descs
-							-- they can be closed, so it makes almose no difference
-							iojx.sandbox.reslimit(lo.RLIMIT_NOFILE, 4)
-							-- iojx.sandbox.reslimit(lo.RLIMIT_AS, tonumber(args.mem))
-							lutil.ptrace(ptrace.PTRACE_TRACEME, 0)
-						end
-
-						local val = ffi.new('struct itimerval')
-						val.it_interval.tv_sec, val.it_interval.tv_usec = 0, 0
-						-- we just passed raw time here
-						val.it_value.tv_sec, val.it_value.tv_usec = u0, u1
-						ffi.C.setitimer(lo.ITIMER_PROF, val, nil)
-
-						iojx.util.exec(execpath)
-					else
-						-- the first syscall would be 'exec' family
-						-- and we'll ignore it	
-						local inited = false
-						while true do
-							local ret, status_final, rusage = lutil.wait4(pid_in)
-							local exitstatus, termsig = laoj.WEXITSTATUS(status_final), laoj.WTERMSIG(status_final)
-
-							local time_ms = lutil.rusage_time(rusage) * 1000
-							local mem = tonumber(rusage.ru_idrss)
-
-							if laoj.WIFEXITED(status_final) then
-								iojx.util.init_loop()
-								print(status_final, exitstatus, termsig)
-								laoj.fork(function ()
-										iojx.util.freopen(diffpath, 'w', iojx.util.stdout())
-									end, 'diff', outputpath, args.result, function (status)
-										if lfs.attributes(diffpath).size == 0 then
-											write_status(args, 'AC', time_ms, mem)
-										else write_status(args, 'WA', time_ms, mem) end
-
-										-- that's a bug, it cannot exit from event loop
-										-- automatically (maybe there are other watchers alive)
-										-- so we need to 'break' explicitly
-										--
-										-- maybe we need a global watcher list ...
-										iojx.util.break_loop(iojx.current_context())
-									end)
-								iojx.util.run()
-								break
-							elseif laoj.WIFSIGNALED(status_final) then
-								print('iojxd - target program termed by signal')
-								print(status_final, exitstatus, termsig)
-								if termsig == lounix.SIGSEGV then -- a common kind of Runtime Error
-									write_status(args, 'RE', time_ms, mem)
-									break
-								end
-								if termsig == lounix.SIGPROF then -- triggered by setitimer, a TLE
-									write_status(args, 'TLE', time_ms, mem)
-								end
-								if termsig == lounix.SIGKILL then -- MLE, setrlimit RLIMIT_AS
-									write_status(args, 'MLE', time_ms, mem)
-								end
-								break
-							elseif laoj.WIFSTOPPED(status_final) then
-
-								termsig = laoj.WSTOPSIG(status_final)
-								-- print(status_final, exitstatus, termsig)
-								if termsig == lounix.SIGPROF then
-									write_status(args, 'TLE', time_ms, mem)
-									break
-								end
-
-								local regs = ffi.new('struct user_regs_struct')
-								ffi.C.ptrace(ptrace.PTRACE_GETREGS, pid_in, nil, regs)
-								local syscall_name = laoj.syscall_name(tonumber(regs.orig_rax))
-								io.write(syscall_name .. ' ')
-
-								if not inited then
-									inited = true
-									lutil.ptrace(ptrace.PTRACE_SYSCALL, pid_in)
-								else
-									if not lutil.inside(args.syscall_whitelist, syscall_name) then
-										print()
-										print('detected invalid syscall ' .. tostring(tonumber(regs.orig_rax)) .. ' ' .. syscall_name)
-										lutil.ptrace(ptrace.PTRACE_KILL, pid_in)
-									else
-										lutil.ptrace(ptrace.PTRACE_SYSCALL, pid_in)
-									end
-								end
-
-							end
-						end
-
-					end
-				end).pid
-
-			end
+				write_status(args, 'CE', 0, 0, readall(paths.cclog))
+			else evaluate(args, paths) end
 		end):start(pid_compiler)
-	else
-
-	end
+	else evaluate(args, paths) end
 end
 
 local tcp_connect = iojxx.ixlbx_tcp_base(iojx.current_context())
@@ -215,8 +238,7 @@ function execute_cmd(cmd, ctx)
 		AUTH = function ()
 			ctx:write('1')
 			ctx.data = { authed = true, context = {
-						execute = judge }
-			}
+						execute = judge } }
 		end,
 		EXIT = function ()
 			ctx:write('1')
@@ -248,6 +270,7 @@ end):on_read(function (ctx, data, len)
 
 			local f, msg = loadstring(data)
 			if f == nil then
+				print('iojxd - loadstring failed: ', msg)
 				ctx:write('0\n' .. msg)
 			else
 				setfenv(f, ctx.data.context)
